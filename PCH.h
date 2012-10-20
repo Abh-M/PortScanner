@@ -17,13 +17,15 @@
 #include <pthread.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/protosw.h>
+
+//#ifdef __linux__
+//#include <sys/protosw.h>
+//#endif
 
 #include <arpa/inet.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
-
 
 
 #include <netinet/tcp.h>

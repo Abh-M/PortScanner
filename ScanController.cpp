@@ -36,8 +36,8 @@ static ScanController *sharedInstance;
 ScanController::ScanController() {
 
 	//by default scan 0-1024;
-	this->startPort = 1;
-	this->endPort = 1;
+	this->startPort = 0;
+	this->endPort = 1024;
 	this->isRange = true;
 	memset(&this->portsToScan,-1,sizeof(this->portsToScan));
 	this->totalPortsToScan = this->startPort - this->endPort;
