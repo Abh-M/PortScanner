@@ -19,6 +19,20 @@
 //};
 
 
+
+typedef struct AllScanResult
+{
+    
+    int portNo;
+    portStates synState;
+    portStates ackState;
+    portStates finState;
+    portStates nullState;
+    portStates xmasState;
+    portStates udpState;
+    
+}AllScanResult;
+
 struct TcpFlags
 {
     bool isSYN;
@@ -92,9 +106,10 @@ public:
 	virtual   				 ~ScanController();
 
 	static ScanController*  shared();
-	ScanResult       				runTCPscan(ScanRequest kRequest);
+	ScanResult       		runTCPscan(ScanRequest kRequest);
+    ScanResult              runUDPScan(ScanRequest kRequest);
 	void       				setTargetIPAddress(char *kTargetIp);
-	ScanResult 				scanPort(ScanRequest kRequest);
+	void 				scanPort(ScanRequest kRequest);
     void                    scanPorts();
     void populatePortsList();
 

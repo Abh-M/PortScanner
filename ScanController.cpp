@@ -37,7 +37,7 @@ ScanController::ScanController() {
 
 	//by default scan 0-1024;
 	this->startPort = 1;
-	this->endPort = 1024;
+	this->endPort = 1;
 	this->isRange = true;
 	memset(&this->portsToScan,-1,sizeof(this->portsToScan));
 	this->totalPortsToScan = this->startPort - this->endPort;
@@ -45,7 +45,7 @@ ScanController::ScanController() {
 
 	//by default run all type of scans
     //knobs to configure type of scans
-	this->typeOfScans[SYN_SCAN]=1;
+	this->typeOfScans[SYN_SCAN]=0;
 	this->typeOfScans[NULL_SCAN]=0;
 	this->typeOfScans[FIN_SCAN]=0;
 	this->typeOfScans[XMAS_SCAN]=0;
@@ -92,9 +92,127 @@ void ScanController::populatePortsList()
 
 
 
-ScanResult ScanController::scanPort(ScanRequest kRequest)
+void ScanController::scanPort(ScanRequest kRequest)
+{
+
+}
+
+
+ScanResult ScanController::runUDPScan(ScanRequest kRequest)
 {
 	ScanResult status;
+    status.srcPort = ntohs(kRequest.srcPort);
+    status.destPort = ntohs(kRequest.destPort);
+    status.srcIp = inet_ntoa(kRequest.src.sin_addr);
+    status.destIp = inet_ntoa(kRequest.dest.sin_addr);
+    status.udp_portState = kUnkown;
+    
+    
+#pragma mark - set pcap for UDP
+    //// Set pcap parameters
+    
+    char *dev, errBuff[50];
+    dev = pcap_lookupdev(errBuff);
+    cout<<dev;
+    
+    
+    pcap_t *handle;
+    
+    
+    struct bpf_program fp;
+    
+    //set filter exp depending upon source port
+    char filter_exp[] = "icmp || dst port ";
+    sprintf(filter_exp,"dst port %d",5678);
+    cout<<"\n FILTER EXP "<<filter_exp;
+    
+    bpf_u_int32 mask;
+    bpf_u_int32 net;
+    
+    if (pcap_lookupnet(dev, &net, &mask, errBuff) == -1) {
+        fprintf(stderr, "Can't get netmask for device %s\n", dev);
+        net = 0;
+        mask = 0;
+    }
+    handle = pcap_open_live(dev, 65535, 0, 5000, errBuff);
+    if (handle == NULL) {
+        fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
+    }
+    if (pcap_compile(handle, &fp, filter_exp, 0, net) == -1) {
+        fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(handle));
+    }
+    if (pcap_setfilter(handle, &fp) == -1) {
+        fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(handle));
+    }
+    ////
+    
+    struct ip ip;
+	struct udphdr udp;
+	int sd;
+	const int on = 1;
+	struct sockaddr_in sin;
+	u_char *packet;
+
+    packet = (u_char *)malloc(60);
+
+#pragma mark - set ip header for UDP packet
+    ip.ip_hl = 0x5;
+	ip.ip_v = 0x4;
+	ip.ip_tos = 0x0;
+	ip.ip_len = 60;
+	ip.ip_id = htons(12830);
+	ip.ip_off = 0x0;
+	ip.ip_ttl = 64;
+    //imp
+	ip.ip_p = IPPROTO_UDP;
+    //
+	ip.ip_sum = 0x0;
+    //IMP
+	ip.ip_src.s_addr = inet_addr(SRC_IP);
+	ip.ip_dst.s_addr =  inet_addr(DEST_IP);
+	ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
+    //IMP
+	memcpy(packet, &ip, sizeof(ip));
+
+
+#pragma mark - set UDP header
+    //IMP
+    udp.uh_sport = htons(SRC_PORT);
+    udp.uh_dport = htons(kRequest.destPort);
+    udp.uh_ulen = htons(8);
+
+    udp.uh_sum = 0;
+	udp.uh_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
+	memcpy(packet + 20, &udp, sizeof(udp));
+
+    if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+		perror("raw socket");
+		exit(1);
+	}
+
+	if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+		perror("setsockopt");
+		exit(1);
+	}
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = ip.ip_dst.s_addr;
+
+	if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
+		perror("sendto");
+		exit(1);
+	}
+//	if (sendto(sd, packet, 60, 0, (struct sockaddr *)&kRequest.dest, sizeof(struct sockaddr)) < 0)  {
+//		perror("sendto");
+//		exit(1);
+//	}
+
+    
+    //close socket
+    //close pcap session
+    
+    close(sd);
+    pcap_close(handle);
 	return status;
 }
 
@@ -330,11 +448,17 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
          
          
          if(kRequest.scanType == ACK_SCAN)
-             status.tcp_portState == kFiltered;
+             status.tcp_portState = kFiltered;
          
          
      }
-
+    
+    //*TO DO if packet is icmp
+    //close socket
+    //close pcap session
+    close(sd);
+    pcap_close(handle);
+  
     return status;
 
 
@@ -382,17 +506,28 @@ void ScanController::scanPorts()
         ScanResult null_result;
         ScanResult fin_result;
         ScanResult xmas_result;
+        ScanResult udp_result;
+        AllScanResult scanResults;
+        scanResults.synState = kUnkown;
+        scanResults.ackState = kUnkown;
+        scanResults.nullState = kUnkown;
+        scanResults.finState = kUnkown;
+        scanResults.xmasState = kUnkown;
 
         
         int port = this->portsToScan[index];
         //check which types of scan to be carried out
 
+        scanResults.portNo = port;
+        
         if(this->typeOfScans[SYN_SCAN]==1)
         {
             //construct scan request
             cout<<"\n Scanning SYN "<<port<<endl;
             ScanRequest synRequest = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, SYN_SCAN);
             syn_result = runTCPscan(synRequest);
+            scanResults.synState = syn_result.tcp_portState;
+            
 
         }
         
@@ -400,25 +535,37 @@ void ScanController::scanPorts()
         {
             ScanRequest ackReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, ACK_SCAN);
             ack_result = runTCPscan(ackReq);
+            scanResults.ackState = ack_result.tcp_portState;
         }
         
         if(this->typeOfScans[NULL_SCAN] == 1)
         {
             ScanRequest ackReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, NULL_SCAN);
             null_result = runTCPscan(ackReq);
+            scanResults.ackState = null_result.tcp_portState;
         }
         
         if(this->typeOfScans[FIN_SCAN] == 1)
         {
+
             ScanRequest finReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, FIN_SCAN);
             fin_result = runTCPscan(finReq);
+            scanResults.finState = fin_result.tcp_portState;
         }
         
         if (this->typeOfScans[XMAS_SCAN]==1) {
             ScanRequest xmasReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, XMAS_SCAN);
             xmas_result = runTCPscan(xmasReq);
+            scanResults.xmasState = fin_result.tcp_portState;
         }
 
+        //Run UDP scan by default
+        
+            ScanRequest udpReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, UDP_SCAN);
+            udp_result = runUDPScan(udpReq);
+
+        
+        
         
         
             
