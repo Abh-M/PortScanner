@@ -19,6 +19,16 @@
 //};
 
 
+struct TcpFlags
+{
+    bool isSYN;
+    bool isACK;
+    bool isRST;
+    bool isFYN;
+    bool isPSH;
+    bool isURG;
+};
+
 struct ScanResult
 {
 

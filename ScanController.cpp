@@ -37,19 +37,20 @@ ScanController::ScanController() {
 
 	//by default scan 0-1024;
 	this->startPort = 1;
-	this->endPort = 2;
+	this->endPort = 1024;
 	this->isRange = true;
 	memset(&this->portsToScan,-1,sizeof(this->portsToScan));
 	this->totalPortsToScan = this->startPort - this->endPort;
 
 
 	//by default run all type of scans
+    //knobs to configure type of scans
 	this->typeOfScans[SYN_SCAN]=1;
-	this->typeOfScans[NULL_SCAN]=1;
-	this->typeOfScans[FIN_SCAN]=1;
-	this->typeOfScans[XMAS_SCAN]=1;
-	this->typeOfScans[ACK_SCAN]=1;
-	this->typeOfScans[PROTO_SCAN]=1;
+	this->typeOfScans[NULL_SCAN]=0;
+	this->typeOfScans[FIN_SCAN]=0;
+	this->typeOfScans[XMAS_SCAN]=0;
+	this->typeOfScans[ACK_SCAN]=0;
+	this->typeOfScans[PROTO_SCAN]=0;
 
 
 	//by default scan loccalhost
@@ -80,7 +81,7 @@ void ScanController::populatePortsList()
     int index =0;
     int port = this->startPort;
     this->totalPortsToScan = 0;
-    for(port = this->startPort,index = 0;port<=this->endPort;port++,index++)
+    for(port = this->startPort,index = 0;port<=this->endPort;port++)
     {
         this->portsToScan[index++]=port;
         this->totalPortsToScan++;
@@ -102,10 +103,14 @@ ScanResult ScanController::scanPort(ScanRequest kRequest)
 
 ScanResult ScanController::runTCPscan(ScanRequest kRequest)
 {
+    
+    
 
     ScanResult status;
     status.srcPort = ntohs(kRequest.srcPort);
     status.destPort = ntohs(kRequest.destPort);
+    status.srcIp = inet_ntoa(kRequest.src.sin_addr);
+    status.destIp = inet_ntoa(kRequest.dest.sin_addr);
     status.tcp_portState = kUnkown;
 
     
@@ -176,7 +181,8 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     memcpy(packet, &ip, sizeof(ip));
     
     tcp.th_sport = htons(SRC_PORT);
-    tcp.th_dport = htons(DEST_PORT);
+    //Set dest port
+    tcp.th_dport = htons(kRequest.destPort);
     tcp.th_seq = htonl(0x131123);
     tcp.th_off = sizeof(struct tcphdr) / 4;
 //    tcp.th_flags = TH_SYN;
@@ -186,6 +192,19 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         case SYN_SCAN:
             tcp.th_flags = TH_SYN;
             break;
+        case ACK_SCAN:
+            tcp.th_flags = TH_ACK;
+            break;
+        case NULL_SCAN:
+            tcp.th_flags = 0x00;
+            break;
+        case FIN_SCAN:
+            tcp.th_flags = TH_FIN;
+            break;
+        case XMAS_SCAN:
+            tcp.th_flags = (TH_FIN | TH_PUSH |TH_URG);
+            break;
+    
         default:
             break;
     }
@@ -196,16 +215,17 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     tcp.th_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&tcp, sizeof(tcp));
     memcpy((packet + sizeof(ip)), &tcp, sizeof(tcp));
     
-//    memset(&sin, 0, sizeof(sin));
-//    sin.sin_family = AF_INET;
-//    sin.sin_addr.s_addr = ip.ip_dst.s_addr;
+    struct sockaddr_in sin;
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = ip.ip_dst.s_addr;
     
     if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
 		perror("setsockopt");
 		exit(1);
 	}
     
-    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&kRequest.dest, sizeof(struct sockaddr)) < 0)  {
+    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
         perror("sendto");
         exit(1);
     }
@@ -225,9 +245,95 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         logIpHeader(iph);
         struct tcphdr *tcpHdr = (struct tcphdr*)(recPakcet + 34);
         logTCPHeader(tcpHdr);
+        
+        //check is protocol is TCP
+        if((unsigned int)iph->ip_p == IPPROTO_TCP)
+        {
+            //check if src and destination ports are valid
+            //get which flags are set in the response
+            unsigned char flags = tcpHdr->th_flags;
+            
+            if(kRequest.scanType == SYN_SCAN)
+            {
+                if( (flags & TH_SYN) && (flags & TH_ACK))
+                    status.tcp_portState = kOpen;
+                else if (flags & TH_SYN)
+                    status.tcp_portState = kOpen;
+                else if(flags & TH_RST)
+                    status.tcp_portState = kClosed;
+                else
+                    status.tcp_portState = kClosedAndUnfiltered;
+                
+            }
+            
+            switch (kRequest.scanType) {
+                case SYN_SCAN:
+                {
+                    if( (flags & TH_SYN) && (flags & TH_ACK))
+                        status.tcp_portState = kOpen;
+                    else if (flags & TH_SYN)
+                        status.tcp_portState = kOpen;
+                    else if(flags & TH_RST)
+                        status.tcp_portState = kClosed;
+                    else
+                        status.tcp_portState = kClosedAndUnfiltered;
+                    
+                }
+                    break;
+                    
+                case ACK_SCAN:
+                {
+                    if(flags & TH_RST)
+                        status.tcp_portState = kUnFiltered;
+                }
+                    break;
+                    
+                case NULL_SCAN:
+                {
+                    if (flags & TH_RST) {
+                        status.tcp_portState = kClosedAndUnfiltered;
+                    }
+                }
+                    break;
+                    
+                case FIN_SCAN:
+                {
+                    if(flags & TH_RST)
+                        status.tcp_portState = kClosedAndUnfiltered;
+                }
+                    break;
+                    
+                case XMAS_SCAN:
+                {
+                    if(flags & TH_RST)
+                        status.tcp_portState = kClosedAndUnfiltered;
+                }
+                    
+                default:
+                    break;
+            }
+        }
 
         
     }
+     else if(recPakcet==NULL)
+     {
+         if(kRequest.scanType==XMAS_SCAN)
+             status.tcp_portState = kOpen;
+         if(kRequest.scanType == NULL_SCAN)
+             status.tcp_portState = kOpen;
+         if(kRequest.scanType == FIN_SCAN)
+             status.tcp_portState = kOpen;
+         
+//         if(kRequest.scanType == SYN_SCAN)
+//             //need to retransmitt //needs to be done from the calling function
+         
+         
+         if(kRequest.scanType == ACK_SCAN)
+             status.tcp_portState == kFiltered;
+         
+         
+     }
 
     return status;
 
@@ -251,6 +357,9 @@ ScanRequest createScanRequestFor(int srcPort, int destPort, char *srcIp, char *d
     des.sin_port = htons(destPort);
     
     
+    newRequest.srcPort = srcPort;
+    newRequest.destPort = destPort;
+    
     newRequest.scanType = kScanType;
     return newRequest;
 
@@ -263,11 +372,17 @@ void ScanController::scanPorts()
 {
 
 
-    ScanResult syn_result;
-
     
     //for each port run TCP and UDP scan
-    for (int index = 0 ;index < this->totalPortsToScan; index++){
+    for (int index = 0 ;index < this->totalPortsToScan; index++)
+    {
+        
+        ScanResult syn_result;
+        ScanResult ack_result;
+        ScanResult null_result;
+        ScanResult fin_result;
+        ScanResult xmas_result;
+
         
         int port = this->portsToScan[index];
         //check which types of scan to be carried out
@@ -275,10 +390,37 @@ void ScanController::scanPorts()
         if(this->typeOfScans[SYN_SCAN]==1)
         {
             //construct scan request
+            cout<<"\n Scanning SYN "<<port<<endl;
             ScanRequest synRequest = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, SYN_SCAN);
             syn_result = runTCPscan(synRequest);
-        
+
         }
+        
+        if(this->typeOfScans[ACK_SCAN] == 1)
+        {
+            ScanRequest ackReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, ACK_SCAN);
+            ack_result = runTCPscan(ackReq);
+        }
+        
+        if(this->typeOfScans[NULL_SCAN] == 1)
+        {
+            ScanRequest ackReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, NULL_SCAN);
+            null_result = runTCPscan(ackReq);
+        }
+        
+        if(this->typeOfScans[FIN_SCAN] == 1)
+        {
+            ScanRequest finReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, FIN_SCAN);
+            fin_result = runTCPscan(finReq);
+        }
+        
+        if (this->typeOfScans[XMAS_SCAN]==1) {
+            ScanRequest xmasReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, XMAS_SCAN);
+            xmas_result = runTCPscan(xmasReq);
+        }
+
+        
+        
             
         
     }

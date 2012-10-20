@@ -25,8 +25,10 @@
 #define DEST_PORT 80
 
 #define SRC_IP "10.0.0.3"
-#define DEST_IP "129.79.247.149"
+//#define DEST_IP "129.79.247.149"
 //#define DEST_IP "10.0.0.2"
+//#define DEST_IP "74.125.225.210"
+#define DEST_IP "69.171.242.70"
 
 
 
@@ -70,6 +72,7 @@ typedef enum{
 	kCloedAndFiltered,
 	kOpenAndUnfiltered,
 	kOpenAndFiltered,
+    kNoResposne,
 	kUnkown,
 
 
