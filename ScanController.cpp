@@ -7,28 +7,27 @@
 
 #include "ScanController.h"
 
-////
-//#include <stdio.h>
-//#include <unistd.h>
-//#include <iostream>
-//#include <stdlib.h>
-//#include <cstring>
-//#include <sys/socket.h>
-//#include <sys/types.h>
-//#include <netinet/in.h>
-//#include <pthread.h>
-//#include <errno.h>
-////#define __FAVOR_BSD
-//#include <netinet/tcp.h>
-//#include <arpa/inet.h>
-//#include <unistd.h>
-//#include <netinet/ip.h>
-//#include <netinet/udp.h>
-////#include <linux/types.h>
-//#include <netdb.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <iostream>
+#include <stdlib.h>
+#include <cstring>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <errno.h>
+//#define __FAVOR_BSD
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+//#include <linux/types.h>
+#include <netdb.h>
 #include "Helpers.h"
 #include "PCH.h"
-using namespace std;
+using namespace std;using namespace std;
 
 #include "Utils.h"
 
