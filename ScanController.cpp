@@ -90,7 +90,191 @@ void ScanController::populatePortsList()
 
 
 
+ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
+{
+    ProtocolScanResult result;
+    result.protocolNumber = req.protocolNumber;
+    result.protocolSupported = false;
+    
+    //// Set pcap parameters
+    
+    char *dev, errBuff[50];
+    if(LOCALHST == 0)
+        dev = pcap_lookupdev(errBuff);
+    else if(LOCALHST == 1 && APPLE ==1)
+        dev = "lo0";
+    else if(LOCALHST == 1 && APPLE ==0)
+        dev = "lo";
+    //#endif
+    cout<<dev;
+    
+    
+    pcap_t *handle;
+    
+    
+    struct bpf_program fp;
+    
+    //set filter exp depending upon source port
+    char filter_exp[100];
+   
+    sprintf(filter_exp,"icmp");
+    cout<<"\n FILTER EXP "<<filter_exp;
+    
+    bpf_u_int32 mask;
+    bpf_u_int32 net;
+    
+    if (pcap_lookupnet(dev, &net, &mask, errBuff) == -1) {
+        fprintf(stderr, "Can't get netmask for device %s\n", dev);
+        net = 0;
+        mask = 0;
+    }
+    handle = pcap_open_live(dev, 65535, 0, 2000, errBuff);
+    if (handle == NULL) {
+        fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
+    }
+    if (pcap_compile(handle, &fp, filter_exp, 0, net) == -1) {
+        fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(handle));
+    }
+    if (pcap_setfilter(handle, &fp) == -1) {
+        fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(handle));
+    }
+    ////
+    
+    struct ip ip;
+	struct udphdr udp;
+	int sd;
+	const int on = 1;
+	struct sockaddr_in sin;
+	u_char *packet;
+    
+    packet = (u_char *)malloc(60);
+    
+    ip.ip_hl = 0x5;
+	ip.ip_v = 0x4;
+	ip.ip_tos = 0x0;
+	ip.ip_len = 60;
+	ip.ip_id = htons(12830);
+	ip.ip_off = 0x0;
+	ip.ip_ttl = 64;
+    //imp
+	ip.ip_p = req.protocolNumber;
+    //
+	ip.ip_sum = 0x0;
+    //IMP
+	ip.ip_src.s_addr = inet_addr(SRC_IP);
+	ip.ip_dst.s_addr =  inet_addr(DEST_IP);
+	ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
+    //IMP
+	memcpy(packet, &ip, sizeof(ip));
+    
+    
+//    //IMP
+    
+    
+    if(ip.ip_p == IPPROTO_ICMP)
+    {
+        cout<<"SCANNIN XXXX ICMP"<<endl;
+    }
+    else if(ip.ip_p == IPPROTO_TCP)
+    {
+        cout<<"SCANNIN XXXX TCP"<<endl;
+    }
+    else if(ip.ip_p == IPPROTO_UDP)
+    {
+//        cout<<"SCANNIN XXXX UDP"<<endl;
+//            udp.uh_sport = htons(SRC_PORT);
+//            udp.uh_dport = htons(kRequest.destPort);
+//            udp.uh_ulen = htons(8);
+//            udp.uh_sum = 0;
+//            udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
+//        	memcpy(packet + 20, &udp, sizeof(udp));
 
+    }
+
+    
+    if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+		perror("raw socket");
+		exit(1);
+	}
+    
+	if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+		perror("setsockopt");
+		exit(1);
+	}
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = ip.ip_dst.s_addr;
+    
+	if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
+		perror("sendto");
+		exit(1);
+	}
+    
+    
+    //RECV
+    struct pcap_pkthdr header;
+    const u_char *recPakcet =  pcap_next(handle, &header);
+    
+        if(recPakcet!=NULL)
+        {
+            printf("\nJacked a packet with length of [%d]\n", header.caplen);
+            struct ip *iph = (struct ip*)(recPakcet+14);
+            logIpHeader(iph);
+
+            //char *srcip = inet_ntoa(iph->ip_src);
+            //char *desip = inet_ntoa(iph->ip_dst);
+            cout<<inet_ntoa(iph->ip_src)<<endl;
+            cout<<inet_ntoa(iph->ip_dst)<<endl;
+            unsigned int proto = (unsigned)iph->ip_p;
+            if((strcmp(inet_ntoa(iph->ip_src), DEST_IP))==0)
+            {
+                cout<<"-----------VALID----------"<<endl;
+                
+                if(proto==IPPROTO_ICMP )
+                {
+                    struct icmp *icmpHdr = (struct icmp*)(packet + 14 + 20);
+                    logICMPHeader(icmpHdr);
+                }
+
+            }
+            else
+                cout<<"-----------INVALID----------"<<endl;
+            
+        }
+        else
+        {
+        }
+
+        
+    close(sd);
+    pcap_close(handle);
+    return result;
+    
+}
+
+void ScanController::runProtocolScan()
+{
+    for(int i=0;i<totalProtocolsToScan;i++)
+    {
+        int protocolNumnber = this->protocolNumbersToScan[i];
+        cout<<"Scanning Protocol :"<<protocolNumnber<<endl;
+        ProtocolScanRequest newReq;
+        newReq.protocolNumber = protocolNumnber;
+        ProtocolScanResult res = runScanForProtocol(newReq);
+    }
+}
+
+
+
+
+void ScanController::populateProtocolNumberToScan()
+{
+    this->totalPortsToScan = 0;
+    for(int i=0;i<256;i++)
+    {
+        this->protocolNumbersToScan[this->totalProtocolsToScan++]=i;
+    }
+}
 void ScanController::scanPort(ScanRequest kRequest)
 {
 
@@ -128,7 +312,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     
     //set filter exp depending upon source port
     char filter_exp[] = "adkjdw";
-    sprintf(filter_exp,"icmp and dst %s",SRC_IP);
+    sprintf(filter_exp,"icmp",SRC_IP);
     cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -231,8 +415,16 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
                 //check is valid icmp is present
                 status.udp_portState=   kFiltered;
                 
-                struct ip* i_ip = (struct ip*)(packet + 14+20+8);
-                logIpHeader(i_ip);
+                unsigned int code = (unsigned int)icmpHeader->icmp_code;
+                unsigned int type = (unsigned int)icmpHeader->icmp_type;
+                if(type==3 && (code==1 || code==2 || code==3 || code==9 || code ==10 || code==13))
+                    status.udp_portState = kFiltered;
+
+//                struct ip* i_ip = (struct ip*)(packet + 14+20+8);
+//                logIpHeader(i_ip);
+                
+
+
                 
             }
             

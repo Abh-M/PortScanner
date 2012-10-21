@@ -66,6 +66,19 @@ struct ScanRequest
     struct sockaddr_in dest;
 };
 
+
+typedef struct ProtocolScanRequest
+{
+    int protocolNumber;
+    
+}ProtocolScanRequest;
+
+typedef struct ProtocolScanResult
+{
+    int protocolNumber;
+    bool protocolSupported;
+}ProtocolScanResult;
+
 class ScanController {
 public:
 
@@ -99,6 +112,11 @@ public:
     int allPortsScanResultIndex;
     
     
+    int protocolNumbersToScan[256];
+    int totalProtocolsToScan;
+
+
+    
     
 #pragma mark - methods
 
@@ -109,9 +127,13 @@ public:
 	ScanResult       		runTCPscan(ScanRequest kRequest);
     ScanResult              runUDPScan(ScanRequest kRequest);
 	void       				setTargetIPAddress(char *kTargetIp);
-	void 				scanPort(ScanRequest kRequest);
+	void                    scanPort(ScanRequest kRequest);
     void                    scanPorts();
-    void populatePortsList();
+    void                    populateProtocolNumberToScan();
+    void                    runProtocolScan();
+    void                    populatePortsList();
+    ProtocolScanResult     runScanForProtocol(ProtocolScanRequest req);
+
 
 };
 

@@ -94,7 +94,11 @@ int main(int argc, const char * argv[])
 //    getMyIpAddress();
     
     ScanController *con =  ScanController::shared();
-    con->scanPorts();
+    con->populateProtocolNumberToScan();
+    con->runProtocolScan();
+
+    //    con->scanPorts();
+    
 //    char *dev, errBuff[50];
 //    dev = pcap_lookupdev(errBuff);
 //    cout<<dev;
