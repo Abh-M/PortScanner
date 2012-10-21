@@ -10,6 +10,15 @@
 #include "Helpers.h"
 
 using namespace std;
+
+struct psd_udp {
+	struct in_addr src;
+	struct in_addr dst;
+	unsigned char pad;
+	unsigned char proto;
+	unsigned short udp_len;
+	struct udphdr udp;
+};
 unsigned short in_cksum(unsigned short *addr, int len)
 
 {
@@ -50,6 +59,19 @@ unsigned short in_cksum_tcp(int src, int dst, unsigned short *addr, int len)
 	return (ans);
 }
 
+unsigned short in_cksum_udp(int src, int dst, unsigned short *addr, int len)
+{
+	struct psd_udp buf;
+    
+	memset(&buf, 0, sizeof(buf));
+	buf.src.s_addr = src;
+	buf.dst.s_addr = dst;
+	buf.pad = 0;
+	buf.proto = IPPROTO_UDP;
+	buf.udp_len = htons(len);
+	memcpy(&(buf.udp), addr, len);
+	return in_cksum((unsigned short *)&buf, 12 + len);
+}
 
 void logIpHeader(struct ip *kIpHdr)
 {
@@ -82,4 +104,45 @@ void logTCPHeader(struct tcphdr *kHeader){
     cout<<"SEQ              : "<<ntohl(kHeader->th_seq)<<endl;
     
     cout<<"---------TCP HEADER-----------"<<endl;
+}
+
+
+void logICMPHeader(struct icmp *header)
+{
+    cout<<"---------ICMP HEADER-----------"<<endl;
+    cout<<"CODE :"<<(unsigned int)(header->icmp_code)<<endl;
+    cout<<"TYPE :"<<(unsigned int)(header->icmp_type)<<endl;
+    cout<<"---------ICMP HEADER-----------"<<endl;
+
+    
+}
+
+
+
+void getMyIpAddress()
+{
+    char errBuff[PCAP_ERRBUF_SIZE];
+    pcap_if_t *alldevs;
+    int result = pcap_findalldevs(&alldevs, errBuff);
+    if(result==0)
+    {
+        //success
+        while(alldevs!=NULL)
+        {
+            cout<<"DEV : "<<alldevs->name<<endl;
+            //print all addresses
+            pcap_addr_t *addrr = alldevs->addresses;
+            while (addrr!=NULL) {
+                
+                struct sockaddr *adr = addrr->addr;
+
+                cout<<inet_ntoa(*(struct in_addr*)adr)<<endl;
+                addrr=addrr->next;
+            }
+            alldevs=alldevs->next;
+        }
+    }
+    else{
+        //failure
+    }
 }

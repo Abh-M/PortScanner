@@ -37,7 +37,7 @@ ScanController::ScanController() {
 
 	//by default scan 0-1024;
 	this->startPort = 0;
-	this->endPort = 1024;
+	this->endPort = 100;
 	this->isRange = true;
 	memset(&this->portsToScan,-1,sizeof(this->portsToScan));
 	this->totalPortsToScan = this->startPort - this->endPort;
@@ -112,7 +112,12 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
+//#ifdef SET_LOCAL
+ //   dev = "lo0";
+//#endif
+//#ifndef SET_LOCAL
     dev = pcap_lookupdev(errBuff);
+//#endif
     cout<<dev;
     
     
@@ -122,8 +127,8 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     struct bpf_program fp;
     
     //set filter exp depending upon source port
-    char filter_exp[] = "icmp || dst port ";
-    sprintf(filter_exp,"dst port %d",5678);
+    char filter_exp[] = "adkjdw";
+    sprintf(filter_exp,"icmp");
     cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -134,7 +139,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         net = 0;
         mask = 0;
     }
-    handle = pcap_open_live(dev, 65535, 0, 5000, errBuff);
+    handle = pcap_open_live(dev, 65535, 1, 2000, errBuff);
     if (handle == NULL) {
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
     }
@@ -182,9 +187,9 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     udp.uh_ulen = htons(8);
 
     udp.uh_sum = 0;
-	udp.uh_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
+    udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
 	memcpy(packet + 20, &udp, sizeof(udp));
-
+    
     if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
 		perror("raw socket");
 		exit(1);
@@ -208,8 +213,44 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
 //	}
 
     
+    //RECV
+    struct pcap_pkthdr header;
+    const u_char *recPakcet ;//= pcap_next(handle, &header);
+
+    while((recPakcet = pcap_next(handle, &header))!=NULL){
+        if(recPakcet!=NULL)
+        {
+            cout<<"\nGOt UDP Packet response\n";
+            printf("\nJacked a packet with length of [%d]\n", header.caplen);
+            struct ip *iph = (struct ip*)(recPakcet+14);
+            logIpHeader(iph);
+            if((unsigned int)iph->ip_p == IPPROTO_ICMP)
+            {
+                struct icmp *icmpHeader = (struct icmp*)(recPakcet + 14 + 20);
+                logICMPHeader(icmpHeader);
+                struct ip *iip = (struct ip*)(packet + 34 + 8);
+                cout<<(unsigned int)iip->ip_p;
+                
+                
+            }
+            
+            
+        }
+        else
+        {
+            status.udp_portState = kOpenORFiltered;
+        }
+
+        
+    }
+          
+
+
+    
+    
     //close socket
     //close pcap session
+    
     
     close(sd);
     pcap_close(handle);

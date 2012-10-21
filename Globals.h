@@ -6,6 +6,8 @@
 #include <sys/types.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
+
+#define SETLOCAL 0
 /* COMMAND LINE ARGS
  *     --help <display invocation options>
     --ports <ports to scan>
@@ -24,10 +26,13 @@
 #define SRC_PORT 5678
 #define DEST_PORT 80
 
+//#define SRC_IP "127.0.0.1"
 #define SRC_IP "10.0.0.3"
-//#define DEST_IP "129.79.247.149"
+//#define DEST_IP "129.79.246.79"
+#define DEST_IP "129.79.247.5"
 //#define DEST_IP "72.26.99.2"
 //#define DEST_IP "10.0.0.3"
+//#define DEST_IP "127.0.0.1"
 //#define DEST_IP "74.125.225.210"
 //#define DEST_IP "69.171.242.70"
 //ss
@@ -35,7 +40,7 @@
 //giganta
 //#define DEST_IP "129.79.246.79"
 //#define DEST_IP "129.79.247.195"
-#define DEST_IP "203.199.134.78"
+//#define DEST_IP "203.199.134.78"
 
 #define ARG_HELP "--help"
 #define ARG_PORTS "--ports"
@@ -77,6 +82,7 @@ typedef enum{
 	kCloedAndFiltered,
 	kOpenAndUnfiltered,
 	kOpenAndFiltered,
+    kOpenORFiltered,
     kNoResposne,
 	kUnkown,
 
@@ -162,6 +168,8 @@ struct psd_tcp {
 	unsigned short tcp_len;
 	struct tcphdr tcp;
 };
+
+
 
 
 #endif /* GLOBALS_H_ */

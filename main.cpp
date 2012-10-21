@@ -27,6 +27,7 @@
 
 #include "PCH.h"
 #include "ScanController.h"
+#include "Helpers.h"
 
 
 #include "Utils.h"
@@ -88,6 +89,9 @@ using namespace std;
 int main(int argc, const char * argv[])
 {
 
+
+
+//    getMyIpAddress();
     
     ScanController *con =  ScanController::shared();
     con->scanPorts();
