@@ -37,7 +37,7 @@ ScanController::ScanController() {
 
 	//by default scan 0-1024;
 	this->startPort = 0;
-	this->endPort = 100;
+	this->endPort = 1024;
 	this->isRange = true;
 	memset(&this->portsToScan,-1,sizeof(this->portsToScan));
 	this->totalPortsToScan = this->startPort - this->endPort;
@@ -228,9 +228,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
             {
                 struct icmp *icmpHeader = (struct icmp*)(recPakcet + 14 + 20);
                 logICMPHeader(icmpHeader);
-                struct ip *iip = (struct ip*)(packet + 34 + 8);
-                cout<<(unsigned int)iip->ip_p;
-                
+                status.udp_portState=   kFiltered;
                 
             }
             
@@ -471,6 +469,10 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
                 default:
                     break;
             }
+        }
+        else if((unsigned int)iph->ip_p == IPPROTO_ICMP)
+        {
+            //Handle ICMP packets
         }
 
         
