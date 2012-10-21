@@ -8,9 +8,8 @@
 #ifndef SCANCONTROLLER_H_
 #define SCANCONTROLLER_H_
 
-#include "Globals.h"
-#include <cstring>
 
+#include "PCH.h"
 //struct scanResult
 //{
 //	int syn,rst,psh,ack,fin,urg;
