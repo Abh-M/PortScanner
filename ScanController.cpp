@@ -111,11 +111,12 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
-//#ifdef SET_LOCAL
- //   dev = "lo0";
-//#endif
-//#ifndef SET_LOCAL
-    dev = pcap_lookupdev(errBuff);
+    if(LOCALHST == 0)
+        dev = pcap_lookupdev(errBuff);
+    else if(LOCALHST == 1 && APPLE ==1)
+        dev = "lo0";
+    else if(LOCALHST == 1 && APPLE ==0)
+        dev = "lo";
 //#endif
     cout<<dev;
     
@@ -127,7 +128,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     
     //set filter exp depending upon source port
     char filter_exp[] = "adkjdw";
-    sprintf(filter_exp,"icmp");
+    sprintf(filter_exp,"icmp and dst %s",SRC_IP);
     cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -227,7 +228,11 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
             {
                 struct icmp *icmpHeader = (struct icmp*)(recPakcet + 14 + 20);
                 logICMPHeader(icmpHeader);
+                //check is valid icmp is present
                 status.udp_portState=   kFiltered;
+                
+                struct ip* i_ip = (struct ip*)(packet + 14+20+8);
+                logIpHeader(i_ip);
                 
             }
             
@@ -273,7 +278,12 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
+    if(LOCALHST == 0)
     dev = pcap_lookupdev(errBuff);
+    else if(LOCALHST == 1 && APPLE ==1)
+        dev = "lo0";
+    else if(LOCALHST == 1 && APPLE ==0)
+        dev = "lo";
     cout<<dev;
     
     
