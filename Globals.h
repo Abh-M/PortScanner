@@ -24,7 +24,7 @@
 #define TCP_SRC_IP "127.0.0.1"
 
 #define SRC_PORT 5678
-#define DEST_PORT 80
+#define DEST_PORT 2008
 
 
 #define LOCALHST 0

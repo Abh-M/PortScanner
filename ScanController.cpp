@@ -141,7 +141,6 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     ////
     
     struct ip ip;
-	struct udphdr udp;
 	int sd;
 	const int on = 1;
 	struct sockaddr_in sin;
@@ -173,21 +172,42 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     if(ip.ip_p == IPPROTO_ICMP)
     {
+        struct icmp icmphd;
+        icmphd.icmp_type = ICMP_ECHO;
+        icmphd.icmp_code = 0;
+        icmphd.icmp_id = 1000;
+        icmphd.icmp_seq = 0;
+        icmphd.icmp_cksum = 0;
+        icmphd.icmp_cksum = in_cksum((unsigned short *)&icmphd, 8);
+        memcpy(packet + 20, &icmphd, 8);
         cout<<"SCANNIN XXXX ICMP"<<endl;
     }
     else if(ip.ip_p == IPPROTO_TCP)
     {
         cout<<"SCANNIN XXXX TCP"<<endl;
+        struct tcphdr tcp;
+        tcp.th_sport = htons(SRC_PORT);
+        tcp.th_dport = htons(DEST_PORT);
+        tcp.th_seq = htonl(0x131123);
+        tcp.th_off = sizeof(struct tcphdr) / 4;
+        tcp.th_flags = TH_SYN;
+        tcp.th_win = htons(32768);
+        tcp.th_sum = 0;
+        tcp.th_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&tcp, sizeof(tcp));
+        memcpy((packet + sizeof(ip)), &tcp, sizeof(tcp));
+
     }
     else if(ip.ip_p == IPPROTO_UDP)
     {
-//        cout<<"SCANNIN XXXX UDP"<<endl;
-//            udp.uh_sport = htons(SRC_PORT);
-//            udp.uh_dport = htons(kRequest.destPort);
-//            udp.uh_ulen = htons(8);
-//            udp.uh_sum = 0;
-//            udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
-//        	memcpy(packet + 20, &udp, sizeof(udp));
+        struct udphdr udp;
+
+        cout<<"SCANNIN XXXX UDP"<<endl;
+        udp.uh_sport = htons(SRC_PORT);
+        udp.uh_dport = htons(69);
+        udp.uh_ulen = htons(8);
+        udp.uh_sum = 0;
+        udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
+        	memcpy(packet + 20, &udp, sizeof(udp));
 
     }
 
@@ -270,7 +290,7 @@ void ScanController::runProtocolScan()
 void ScanController::populateProtocolNumberToScan()
 {
     this->totalPortsToScan = 0;
-    for(int i=0;i<256;i++)
+    for(int i=6;i<7;i++)
     {
         this->protocolNumbersToScan[this->totalProtocolsToScan++]=i;
     }
