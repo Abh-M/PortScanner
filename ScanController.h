@@ -96,7 +96,8 @@ public:
 	
     bool isRange;
     
-    
+    AllScanResult allPortsScanResult[65535];
+    int allPortsScanResultIndex;
     
     
     

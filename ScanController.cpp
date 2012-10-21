@@ -535,12 +535,15 @@ ScanRequest createScanRequestFor(int srcPort, int destPort, char *srcIp, char *d
 
 
 
+
+
 void ScanController::scanPorts()
 {
 
 
     
     //for each port run TCP and UDP scan
+    this->allPortsScanResultIndex = 0;
     for (int index = 0 ;index < this->totalPortsToScan; index++)
     {
         
@@ -606,10 +609,11 @@ void ScanController::scanPorts()
         
             ScanRequest udpReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, UDP_SCAN);
             udp_result = runUDPScan(udpReq);
-
+            scanResults.udpState = udp_result.udp_portState;
         
         
         
+        this->allPortsScanResult[this->allPortsScanResultIndex++] = scanResults;
         
             
         

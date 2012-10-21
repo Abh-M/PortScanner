@@ -17,6 +17,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <unistd.h>
+#include <cstring>
 
 //#ifdef __linux__
 //#include <sys/protosw.h>
@@ -27,7 +28,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-
+#define __FAVOR_BSD
 #include <netinet/tcp.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>
