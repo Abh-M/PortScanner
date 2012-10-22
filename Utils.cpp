@@ -109,10 +109,10 @@ TCPScanType  getTCPScanTypeFromScanType(int kType)
             type = kNULL;
             break;
         case XMAS_SCAN:
-            kType =kXMAS;
+            type =kXMAS;
             break;
         default:
-            kType =kInvalidScanType;
+            type =kInvalidScanType;
             break;
     }
     return type;
