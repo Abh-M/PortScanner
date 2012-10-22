@@ -30,7 +30,7 @@ typedef struct AllScanResult
     portStates xmasState;
     portStates udpState;
     
-}AllScanResult;
+}AllScanResultForPort;
 
 struct TcpFlags
 {
@@ -91,7 +91,7 @@ public:
     
 
 	// 0 0 0 0 0 0...each set bit denotes which type of scan to carry out
-	int typeOfScans[6];
+	int typeOfScans[7];
 
     //to read IP from filename
 	char *fileName;
@@ -108,7 +108,7 @@ public:
 	
     bool isRange;
     
-    AllScanResult allPortsScanResult[65535];
+    AllScanResultForPort allPortsScanResult[65535];
     int allPortsScanResultIndex;
     
     
@@ -116,6 +116,8 @@ public:
     int totalProtocolsToScan;
 
 
+    int totalIpAddressToScan;
+    char *ipaddresses[10];
     
     
 #pragma mark - methods

@@ -31,9 +31,9 @@
 #define APPLE 1
 
 //#define SRC_IP "127.0.0.1"
-//#define SRC_IP "10.0.0.3"
+#define SRC_IP "10.0.0.3"
 
-#define SRC_IP "140.182.147.44"
+//#define SRC_IP "140.182.147.44"
 
 //#define DEST_IP "140.182.147.44"
 //#define DEST_IP "129.79.246.79"
@@ -94,6 +94,7 @@ typedef enum{
     kOpenORFiltered,
     kNoResposne,
 	kUnkown,
+    kNotUsed,
 
 
 

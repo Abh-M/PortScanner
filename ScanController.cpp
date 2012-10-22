@@ -44,12 +44,13 @@ ScanController::ScanController() {
 
 	//by default run all type of scans
     //knobs to configure type of scans
-	this->typeOfScans[SYN_SCAN]=0;
+	this->typeOfScans[SYN_SCAN]=1;
 	this->typeOfScans[NULL_SCAN]=0;
 	this->typeOfScans[FIN_SCAN]=0;
 	this->typeOfScans[XMAS_SCAN]=0;
 	this->typeOfScans[ACK_SCAN]=0;
 	this->typeOfScans[PROTO_SCAN]=0;
+    this->typeOfScans[UDP_SCAN]=0;
 
 
 	//by default scan loccalhost
@@ -71,7 +72,8 @@ ScanController::ScanController() {
 
 void ScanController::setTargetIPAddress(char *kTargetIp)
 {
-
+    this->sourceIP = SRC_IP;
+    this->targetIP = DEST_IP;
 
 }
 
@@ -496,7 +498,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         dev = "lo0";
     else if(LOCALHST == 1 && APPLE ==0)
         dev = "lo";
-    cout<<dev;
+   // cout<<dev;
     
     
     pcap_t *handle;
@@ -507,7 +509,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     //set filter exp depending upon source port
     char filter_exp[] = "icmp || dst port ";
     sprintf(filter_exp,"dst port %d",5678);
-    cout<<"\n FILTER EXP "<<filter_exp;
+   // cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
     bpf_u_int32 net;
@@ -618,7 +620,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     const u_char *recPakcet = pcap_next(handle, &header);
     if(recPakcet!=NULL)
     {
-        printf("\nJacked a packet with length of [%d]\n", header.len);
+        //printf("\nJacked a packet with length of [%d]\n", header.len);
         struct ip *iph = (struct ip*)(recPakcet + 14);
         logIpHeader(iph);
         struct tcphdr *tcpHdr = (struct tcphdr*)(recPakcet + 34);
@@ -707,7 +709,8 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
          if(kRequest.scanType == FIN_SCAN)
              status.tcp_portState = kOpen;
          
-//         if(kRequest.scanType == SYN_SCAN)
+         if(kRequest.scanType == SYN_SCAN)
+             status.tcp_portState = kFiltered;
 //             //need to retransmitt //needs to be done from the calling function
          
          
@@ -756,6 +759,42 @@ ScanRequest createScanRequestFor(int srcPort, int destPort, char *srcIp, char *d
 
 
 
+char *getStringForPortState(portStates kState)
+{
+    char *str = "Not Used";
+    switch (kState) {
+        case kOpen:str="open";break;
+        case kClosed:str="closed";break;
+        case kCloedAndFiltered: str="closed and filtered";break;
+        case kFiltered: str="filtered"; break;
+        case kUnkown: str="unknown"; break;
+        case kUnFiltered: str="unfiltered"; break;
+        case kNoResposne: str="no response"; break;
+        case kOpenORFiltered: str="open or filtered"; break;
+        case kClosedAndUnfiltered: str="closed or filtered"; break;
+        case kOpenAndFiltered: str="open and filtered"; break;
+        case kOpenAndUnfiltered: str="open and unfiltered"; break;
+        default:break;
+    }
+    return str;
+}
+
+
+
+void printScanResultForPort(AllScanResultForPort kResult)
+{
+    cout<<endl<<"-----------------------------------------"<<endl;
+    cout<<"\nPORT : "<<kResult.portNo;
+    cout<<"\nSYN  : "<<getStringForPortState(kResult.synState);
+    cout<<"\nACK  : "<<getStringForPortState(kResult.ackState);
+    cout<<"\nNULL : "<<getStringForPortState(kResult.nullState);
+    cout<<"\nFIN  : "<<getStringForPortState(kResult.finState);
+    cout<<"\nXMAS : "<<getStringForPortState(kResult.xmasState);
+    cout<<endl<<"-----------------------------------------"<<endl;
+
+
+}
+
 
 
 void ScanController::scanPorts()
@@ -774,13 +813,13 @@ void ScanController::scanPorts()
         ScanResult fin_result;
         ScanResult xmas_result;
         ScanResult udp_result;
-        AllScanResult scanResults;
-        scanResults.synState = kUnkown;
-        scanResults.ackState = kUnkown;
-        scanResults.nullState = kUnkown;
-        scanResults.finState = kUnkown;
-        scanResults.xmasState = kUnkown;
-
+        AllScanResultForPort scanResults;
+        scanResults.synState = kNotUsed;
+        scanResults.ackState = kNotUsed;
+        scanResults.nullState = kNotUsed;
+        scanResults.finState = kNotUsed;
+        scanResults.xmasState = kNotUsed;
+        scanResults.udpState = kNotUsed;
         
         int port = this->portsToScan[index];
         //check which types of scan to be carried out
@@ -826,17 +865,20 @@ void ScanController::scanPorts()
             scanResults.xmasState = fin_result.tcp_portState;
         }
 
-        //Run UDP scan by default
-        
+        if(this->typeOfScans[UDP_SCAN]==1)
+        {
             ScanRequest udpReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, UDP_SCAN);
             udp_result = runUDPScan(udpReq);
             scanResults.udpState = udp_result.udp_portState;
+            
+        }
+        
         
         
         
         this->allPortsScanResult[this->allPortsScanResultIndex++] = scanResults;
+        printScanResultForPort(scanResults);
         
-            
         
     }
     
