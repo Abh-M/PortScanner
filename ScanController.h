@@ -18,6 +18,8 @@
 //};
 
 
+using namespace std;
+
 
 typedef struct AllScanResult
 {
@@ -120,6 +122,7 @@ public:
     char *ipaddresses[10];
     
     
+    
 #pragma mark - methods
     
 	ScanController();
@@ -128,7 +131,7 @@ public:
 	static ScanController*  shared();
 	ScanResult       		runTCPscan(ScanRequest kRequest);
     ScanResult              runUDPScan(ScanRequest kRequest);
-	void       				setTargetIPAddress(char *kTargetIp);
+	void       				setTargetIPAddress(char *kSourceIp,char *kTargetIp);
 	void                    scanPort(ScanRequest kRequest);
     void                    scanPorts();
     void                    populateProtocolNumberToScan();

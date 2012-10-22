@@ -9,13 +9,13 @@
 #define UTILS_H_
 
 #include "Globals.h"
-
-
+#include "PCH.h"
+using namespace std;
 char* statusToStr(portStates state);
 int getPacketSizeForScanType(int scanType);
 TCPScanType  getTCPScanTypeFromScanType(int kType);
 void readHelpFile(char *fileName);
-void readIPFile(char *fileName);
+vector<string> readIPFile(char *fileName);
 
 int scanStringToNumber(char* scanType);
 char *scanNumToString(int scanType);

@@ -191,10 +191,9 @@ void readHelpFile(char *fileName)
     
 }
 
-void readIPFile(char *fileName)
+vector<string> readIPFile(char *fileName)
 {
 	ifstream infile;
-	int ipAddressList[65535];
 	vector<string> ipaddStringList;
 	ipaddStringList.clear();
 	infile.open(fileName);
@@ -209,5 +208,6 @@ void readIPFile(char *fileName)
 			ipaddStringList.push_back(line);
 		}
 	}
+    return ipaddStringList;
 }
 

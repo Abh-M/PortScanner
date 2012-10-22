@@ -18,6 +18,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <unistd.h>
+#include <vector>
 
 
 #include <arpa/inet.h>

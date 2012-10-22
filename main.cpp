@@ -22,6 +22,8 @@ int main(int argc, const char * argv[])
     
 	const char *argSeperator = " ";
 	const char *valueSeperator = "=";
+    bool isIpProvided = false;
+    vector<string> allIPaddress;
 	int portsList[MAX_PORTS];
 	for(int i=1;i<argc;i++)
         //0 is command
@@ -49,7 +51,7 @@ int main(int argc, const char * argv[])
                 //Range of ports found.
 				if(strstr(val,"-")!=NULL)
 				{
-
+                    
 					value = strtok(val,"[-]");
 					con->startPort = atoi(value);
 					while(value!=NULL)
@@ -82,10 +84,10 @@ int main(int argc, const char * argv[])
                     
                     //
                     
-//					for(int i=0;i<5;i++)
-//					{
-//						cout<<"port"<<i<<":"<<portsList[i]<<endl;
-//					}
+                    //					for(int i=0;i<5;i++)
+                    //					{
+                    //						cout<<"port"<<i<<":"<<portsList[i]<<endl;
+                    //					}
                     
                     
                     con->populatePortsList(portsList);
@@ -99,17 +101,20 @@ int main(int argc, const char * argv[])
         //		{
         //
         //		}
-        //		if((strcmp(param, ARG_FILE))==0)
-        //		{
-        //			cout<<"Reading From File!"<<endl;
-        //			readIPFile("IPAddressList.txt");
-        //		}
-        //		if((strcmp(param, ARG_SPEED))==0)
-        //		{
-        //            //enable multithreading
-        //			con->speed = true;
-        //			cout<<"Speedup="<<con->speed;
-        //		}
+		if((strcmp(param, ARG_FILE))==0)
+		{
+			cout<<"Reading From File!"<<endl;
+			vector<string> allIPaddress =  readIPFile("/Users/abhineet/Github/demo/demo/IPAddressList.txt");
+            cout<<"Reading From Done!"<<allIPaddress[1];
+            
+            
+		}
+		if((strcmp(param, ARG_SPEED))==0)
+		{
+            //enable multithreading
+			con->speed = true;
+			cout<<"Speedup="<<con->speed;
+		}
 		if((strstr(param, ARG_SCAN))!=NULL)
 		{
             con->resetAllScanTypes();
@@ -192,9 +197,20 @@ int main(int argc, const char * argv[])
         //		}
         
 	}
-	//con->scanPorts();
-    con->printScanTypeConf();
+    
+    
+    
+    
+
+    //set source and destination IP address and then start scan
+    con->setTargetIPAddress(SRC_IP, DEST_IP);
     con->scanPorts();
+    
+    
+    
+//con->scanPorts();
+//    con->printScanTypeConf();
+//    con->scanPorts();
 	return 0;
 }
 

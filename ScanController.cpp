@@ -55,9 +55,9 @@ ScanController::ScanController() {
     
     //by default scan loccalhost
     this->targetIP = new char[15]();
-    strcpy(this->targetIP,DEST_IP);
+    //    strcpy(this->targetIP,DEST_IP);
     this->sourceIP = new char[15]();
-    strcpy(this->sourceIP,SRC_IP);
+    //    strcpy(this->sourceIP,SRC_IP);
     
     
     //ignore this
@@ -79,29 +79,31 @@ void ScanController::resetAllScanTypes()
     this->typeOfScans[ACK_SCAN]=0;
     this->typeOfScans[PROTO_SCAN]=0;
     this->typeOfScans[UDP_SCAN]=0;
-
+    
     
 }
+
+
 
 
 void ScanController::printScanTypeConf()
 {
     for (int i=0; i<7; i++) {
-     if(this->typeOfScans[i])
-         cout<<"\n"<<scanNumToString(i);
+        if(this->typeOfScans[i])
+            cout<<"\n"<<scanNumToString(i);
     }
 }
-void ScanController::setTargetIPAddress(char *kTargetIp)
+void ScanController::setTargetIPAddress(char *kSourceIp,char *kTargetIp)
 {
-    this->sourceIP = SRC_IP;
-    this->targetIP = DEST_IP;
+    this->sourceIP = kSourceIp;
+    this->targetIP = kTargetIp;
     
 }
 
 void ScanController::populatePortsList(int kStart, int kEnd)
 {
     
-   // cout<<kStart<<" "<<kEnd;
+    // cout<<kStart<<" "<<kEnd;
     this->totalPortsToScan = 0;
     for(int port = kStart; port<=kEnd;port++)
     {
@@ -111,7 +113,7 @@ void ScanController::populatePortsList(int kStart, int kEnd)
     for (int i=0; i<this->totalPortsToScan;i++) {
         cout<<"\n PORT : "<<this->portsToScan[i];
     }
-
+    
 }
 
 
@@ -129,7 +131,7 @@ void ScanController::populatePortsList(int kPortsList[MAX_PORTS])
     for (int i=0; i<this->totalPortsToScan;i++) {
         cout<<"\n PORT : "<<this->portsToScan[i];
     }
-
+    
     
 }
 
@@ -574,7 +576,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     //set filter exp depending upon source port
     char filter_exp[] = "icmp || dst port ";
-    sprintf(filter_exp,"dst port %d",5678);
+    sprintf(filter_exp,"icmp || dst port %d",5678);
     // cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -686,31 +688,31 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     const u_char *recPakcet = pcap_next(handle, &header);
     if(recPakcet!=NULL)
     {
-        //printf("\nJacked a packet with length of [%d]\n", header.len);
         struct ip *iph = (struct ip*)(recPakcet + 14);
         logIpHeader(iph);
-        struct tcphdr *tcpHdr = (struct tcphdr*)(recPakcet + 34);
-        logTCPHeader(tcpHdr);
         
         //check is protocol is TCP
         if((unsigned int)iph->ip_p == IPPROTO_TCP)
         {
+            struct tcphdr *tcpHdr = (struct tcphdr*)(recPakcet + 34);
+            logTCPHeader(tcpHdr);
+
             //check if src and destination ports are valid
             //get which flags are set in the response
             unsigned char flags = tcpHdr->th_flags;
             
-            if(kRequest.scanType == SYN_SCAN)
-            {
-                if( (flags & TH_SYN) && (flags & TH_ACK))
-                    status.tcp_portState = kOpen;
-                else if (flags & TH_SYN)
-                    status.tcp_portState = kOpen;
-                else if(flags & TH_RST)
-                    status.tcp_portState = kClosed;
-                else
-                    status.tcp_portState = kClosedAndUnfiltered;
-                
-            }
+//            if(kRequest.scanType == SYN_SCAN)
+//            {
+//                if( (flags & TH_SYN) && (flags & TH_ACK))
+//                    status.tcp_portState = kOpen;
+//                else if (flags & TH_SYN)
+//                    status.tcp_portState = kOpen;
+//                else if(flags & TH_RST)
+//                    status.tcp_portState = kClosed;
+//                else
+//                    status.tcp_portState = kClosedAndUnfiltered;
+//                
+//            }
             
             switch (kRequest.scanType) {
                 case SYN_SCAN:
@@ -762,6 +764,54 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         else if((unsigned int)iph->ip_p == IPPROTO_ICMP)
         {
             //Handle ICMP packets
+            
+            cout<<"\n.......GOT ICMP FOR TCP";
+            struct icmp *icmph = (struct icmp*)(recPakcet + 14 + 20);
+            unsigned int code = (unsigned int)icmph->icmp_code;
+            unsigned int type = (unsigned int)icmph->icmp_type;
+            logICMPHeader(icmph);
+            switch (kRequest.scanType) {
+                case SYN_SCAN:
+                {
+                  if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
+                      status.tcp_portState = kFiltered;
+                }
+                    break;
+                    
+                case ACK_SCAN:
+                {
+                    if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
+                        status.tcp_portState = kFiltered;
+                }
+                    break;
+                    
+//                case NULL_SCAN:
+//                {
+//                    if (flags & TH_RST) {
+//                        status.tcp_portState = kClosedAndUnfiltered;
+//                    }
+//                }
+//                    break;
+//                    
+//                case FIN_SCAN:
+//                {
+//                    if(flags & TH_RST)
+//                        status.tcp_portState = kClosedAndUnfiltered;
+//                }
+//                    break;
+//                    
+//                case XMAS_SCAN:
+//                {
+//                    if(flags & TH_RST)
+//                        status.tcp_portState = kClosedAndUnfiltered;
+//                }
+                    
+                default:
+                    break;
+            }
+
+            
+
         }
         
         
@@ -774,15 +824,10 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             status.tcp_portState = kOpen;
         if(kRequest.scanType == FIN_SCAN)
             status.tcp_portState = kOpen;
-        
         if(kRequest.scanType == SYN_SCAN)
             status.tcp_portState = kFiltered;
-        //             //need to retransmitt //needs to be done from the calling function
-        
-        
         if(kRequest.scanType == ACK_SCAN)
             status.tcp_portState = kFiltered;
-        
         
     }
     
