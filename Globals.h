@@ -61,6 +61,9 @@
 
 
 
+#define INVALID_PORT -1
+
+
 //Type of scans
 #define SYN_SCAN   0
 #define ACK_SCAN   1
@@ -69,7 +72,7 @@
 #define XMAS_SCAN  4
 #define PROTO_SCAN 5
 #define UDP_SCAN   6
-
+#define UNKNOWN_SCAN -1
 typedef enum{
     kSYN,
     kACK,
@@ -102,20 +105,10 @@ typedef enum{
 
 
 
-//typedef enum{
-//	SYN_SCAN  = 0,
-//	ACK_SCAN  = 1,
-//	NULL_SCAN = 2,
-//	FIN_SCAN  = 3,
-//	XMAS_SCAN = 4,
-//	PROTO_SCAN = 5,
-//}SCAN_INDEX;
 
 
 
-
-
-#define MAX_PORTS 65535
+#define MAX_PORTS 65536
 #define MIN_PORTS 1
 
 struct psd_tcp {

@@ -90,15 +90,15 @@ void logTCPHeader(struct tcphdr *kHeader){
     cout<<"SOURCE PORT      : "<<ntohs(kHeader->th_sport)<<endl;
     cout<<"DESTINATION PORT : "<<ntohs(kHeader->th_dport)<<endl;
     cout<<"FLAGS            : ";
-		if (kHeader->th_flags & TH_SYN)
-			putchar('S');
-        if(kHeader->th_flags & TH_ACK)
-            putchar('.');
-        if(kHeader->th_flags & TH_FIN)
-            putchar('F');
-        if (kHeader->th_flags & TH_RST)
-            putchar('R');
-
+    if (kHeader->th_flags & TH_SYN)
+        putchar('S');
+    if(kHeader->th_flags & TH_ACK)
+        putchar('.');
+    if(kHeader->th_flags & TH_FIN)
+        putchar('F');
+    if (kHeader->th_flags & TH_RST)
+        putchar('R');
+    
     cout<<endl;
     cout<<"ACK              : "<<(unsigned int)ntohl(kHeader->th_ack)<<endl;
     cout<<"SEQ              : "<<ntohl(kHeader->th_seq)<<endl;
@@ -113,7 +113,7 @@ void logICMPHeader(struct icmp *header)
     cout<<"CODE :"<<(unsigned int)(header->icmp_code)<<endl;
     cout<<"TYPE :"<<(unsigned int)(header->icmp_type)<<endl;
     cout<<"---------ICMP HEADER-----------"<<endl;
-
+    
     
 }
 
@@ -135,7 +135,7 @@ void getMyIpAddress()
             while (addrr!=NULL) {
                 
                 struct sockaddr *adr = addrr->addr;
-
+                
                 cout<<inet_ntoa(*(struct in_addr*)adr)<<endl;
                 addrr=addrr->next;
             }

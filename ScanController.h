@@ -37,14 +37,14 @@ struct TcpFlags
     bool isSYN;
     bool isACK;
     bool isRST;
-    bool isFYN;
+    bool isFIN;
     bool isPSH;
     bool isURG;
 };
 
 struct ScanResult
 {
-
+    
 	portStates tcp_portState;
     portStates udp_portState;
 	int destPort;
@@ -56,7 +56,7 @@ struct ScanResult
 
 struct ScanRequest
 {
-  
+    
     int srcPort;
     int destPort;
     int scanType;
@@ -81,7 +81,7 @@ typedef struct ProtocolScanResult
 
 class ScanController {
 public:
-
+    
     
 #pragma mark - memeber variables
 	//port range
@@ -89,21 +89,21 @@ public:
 	int startPort;
 	int endPort;
     
-
+    
 	// 0 0 0 0 0 0...each set bit denotes which type of scan to carry out
 	int typeOfScans[7];
-
+    
     //to read IP from filename
 	char *fileName;
-
+    
 	bool speed;
 	
     bool scanLocalhost;
-
+    
 	char *targetIP;
 	char *sourceIP;
-
-	int portsToScan[65536];
+    
+	int portsToScan[MAX_PORTS];
 	int totalPortsToScan;
 	
     bool isRange;
@@ -114,17 +114,17 @@ public:
     
     int protocolNumbersToScan[256];
     int totalProtocolsToScan;
-
-
+    
+    
     int totalIpAddressToScan;
     char *ipaddresses[10];
     
     
 #pragma mark - methods
-
+    
 	ScanController();
 	virtual   				 ~ScanController();
-
+    
 	static ScanController*  shared();
 	ScanResult       		runTCPscan(ScanRequest kRequest);
     ScanResult              runUDPScan(ScanRequest kRequest);
@@ -134,9 +134,13 @@ public:
     void                    populateProtocolNumberToScan();
     void                    runProtocolScan();
     void                    populatePortsList();
-    ProtocolScanResult     runScanForProtocol(ProtocolScanRequest req);
-
-
+    ProtocolScanResult      runScanForProtocol(ProtocolScanRequest req);
+    void                    resetAllScanTypes();
+    void                    printScanTypeConf();
+    void                    flushPortsList();
+    void                    populatePortsList(int array[]);
+    void                    populatePortsList(int kStart, int kEnd);
+    
 };
 
 #endif /* SCANCONTROLLER_H_ */

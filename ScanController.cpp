@@ -33,49 +33,116 @@ using namespace std;
 
 static ScanController *sharedInstance;
 ScanController::ScanController() {
-
-	//by default scan 0-1024;
-	this->startPort = 0;
-	this->endPort = 1024;
-	this->isRange = true;
-	memset(&this->portsToScan,-1,sizeof(this->portsToScan));
-	this->totalPortsToScan = this->startPort - this->endPort;
-
-
-	//by default run all type of scans
+    
+    //by default scan 0-1024;
+    this->startPort = 0;
+    this->endPort = 1024;
+    this->isRange = true;
+    memset(&this->portsToScan,-1,sizeof(this->portsToScan));
+    this->totalPortsToScan = this->startPort - this->endPort;
+    
+    
+    //by default run all type of scans
     //knobs to configure type of scans
-	this->typeOfScans[SYN_SCAN]=1;
-	this->typeOfScans[NULL_SCAN]=0;
-	this->typeOfScans[FIN_SCAN]=0;
-	this->typeOfScans[XMAS_SCAN]=0;
-	this->typeOfScans[ACK_SCAN]=0;
-	this->typeOfScans[PROTO_SCAN]=0;
+    this->typeOfScans[SYN_SCAN]=1;
+    this->typeOfScans[NULL_SCAN]=0;
+    this->typeOfScans[FIN_SCAN]=0;
+    this->typeOfScans[XMAS_SCAN]=0;
+    this->typeOfScans[ACK_SCAN]=0;
+    this->typeOfScans[PROTO_SCAN]=0;
     this->typeOfScans[UDP_SCAN]=0;
-
-
-	//by default scan loccalhost
-	this->targetIP = new char[15]();
-	strcpy(this->targetIP,DEST_IP);
-	this->sourceIP = new char[15]();
-	strcpy(this->sourceIP,SRC_IP);
-
-
+    
+    
+    //by default scan loccalhost
+    this->targetIP = new char[15]();
+    strcpy(this->targetIP,DEST_IP);
+    this->sourceIP = new char[15]();
+    strcpy(this->sourceIP,SRC_IP);
+    
+    
     //ignore this
-	this->scanLocalhost = true;
-
-	this->speed = false;
-	this->fileName = false;
+    this->scanLocalhost = true;
+    
+    this->speed = false;
+    this->fileName = false;
     
     populatePortsList();
-
+    
 }
 
+void ScanController::resetAllScanTypes()
+{
+    this->typeOfScans[SYN_SCAN]=0;
+    this->typeOfScans[NULL_SCAN]=0;
+    this->typeOfScans[FIN_SCAN]=0;
+    this->typeOfScans[XMAS_SCAN]=0;
+    this->typeOfScans[ACK_SCAN]=0;
+    this->typeOfScans[PROTO_SCAN]=0;
+    this->typeOfScans[UDP_SCAN]=0;
+
+    
+}
+
+
+void ScanController::printScanTypeConf()
+{
+    for (int i=0; i<7; i++) {
+     if(this->typeOfScans[i])
+         cout<<"\n"<<scanNumToString(i);
+    }
+}
 void ScanController::setTargetIPAddress(char *kTargetIp)
 {
     this->sourceIP = SRC_IP;
     this->targetIP = DEST_IP;
+    
+}
+
+void ScanController::populatePortsList(int kStart, int kEnd)
+{
+    
+   // cout<<kStart<<" "<<kEnd;
+    this->totalPortsToScan = 0;
+    for(int port = kStart; port<=kEnd;port++)
+    {
+        this->portsToScan[this->totalPortsToScan++]=port;
+    }
+    cout<<this->totalPortsToScan;
+    for (int i=0; i<this->totalPortsToScan;i++) {
+        cout<<"\n PORT : "<<this->portsToScan[i];
+    }
 
 }
+
+
+void ScanController::populatePortsList(int kPortsList[MAX_PORTS])
+{
+    
+    int index = 0;
+    while (kPortsList[index]!=INVALID_PORT)
+    {
+        this->portsToScan[this->totalPortsToScan++]=kPortsList[index];
+        index++;
+    }
+    
+    
+    for (int i=0; i<this->totalPortsToScan;i++) {
+        cout<<"\n PORT : "<<this->portsToScan[i];
+    }
+
+    
+}
+
+void ScanController::flushPortsList()
+{
+    int port = 0;
+    this->startPort =0;
+    this->endPort = 0;
+    this->totalPortsToScan = 0;
+    for(port=0;port<MAX_PORTS;port++)
+        this->portsToScan[port]= INVALID_PORT;
+}
+
 
 void ScanController::populatePortsList()
 {
@@ -87,7 +154,6 @@ void ScanController::populatePortsList()
         this->portsToScan[index++]=port;
         this->totalPortsToScan++;
     }
-        
 }
 
 
@@ -118,7 +184,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     //set filter exp depending upon source port
     char filter_exp[100];
-   
+    
     sprintf(filter_exp,"icmp");
     cout<<"\n FILTER EXP "<<filter_exp;
     
@@ -143,33 +209,33 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     ////
     
     struct ip ip;
-	int sd;
-	const int on = 1;
-	struct sockaddr_in sin;
-	u_char *packet;
+    int sd;
+    const int on = 1;
+    struct sockaddr_in sin;
+    u_char *packet;
     
     packet = (u_char *)malloc(60);
     
     ip.ip_hl = 0x5;
-	ip.ip_v = 0x4;
-	ip.ip_tos = 0x0;
-	ip.ip_len = 60;
-	ip.ip_id = htons(12830);
-	ip.ip_off = 0x0;
-	ip.ip_ttl = 64;
+    ip.ip_v = 0x4;
+    ip.ip_tos = 0x0;
+    ip.ip_len = 60;
+    ip.ip_id = htons(12830);
+    ip.ip_off = 0x0;
+    ip.ip_ttl = 64;
     //imp
-	ip.ip_p = req.protocolNumber;
+    ip.ip_p = req.protocolNumber;
     //
-	ip.ip_sum = 0x0;
+    ip.ip_sum = 0x0;
     //IMP
-	ip.ip_src.s_addr = inet_addr(SRC_IP);
-	ip.ip_dst.s_addr =  inet_addr(DEST_IP);
-	ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
+    ip.ip_src.s_addr = inet_addr(SRC_IP);
+    ip.ip_dst.s_addr =  inet_addr(DEST_IP);
+    ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
     //IMP
-	memcpy(packet, &ip, sizeof(ip));
+    memcpy(packet, &ip, sizeof(ip));
     
     
-//    //IMP
+    //    //IMP
     
     
     if(ip.ip_p == IPPROTO_ICMP)
@@ -197,77 +263,77 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         tcp.th_sum = 0;
         tcp.th_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&tcp, sizeof(tcp));
         memcpy((packet + sizeof(ip)), &tcp, sizeof(tcp));
-
+        
     }
     else if(ip.ip_p == IPPROTO_UDP)
     {
         struct udphdr udp;
-
+        
         cout<<"SCANNIN XXXX UDP"<<endl;
         udp.uh_sport = htons(SRC_PORT);
         udp.uh_dport = htons(69);
         udp.uh_ulen = htons(8);
         udp.uh_sum = 0;
         udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
-        	memcpy(packet + 20, &udp, sizeof(udp));
-
+        memcpy(packet + 20, &udp, sizeof(udp));
+        
     }
-
+    
     
     if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-		perror("raw socket");
-		exit(1);
-	}
+        perror("raw socket");
+        exit(1);
+    }
     
-	if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-		perror("setsockopt");
-		exit(1);
-	}
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = ip.ip_dst.s_addr;
+    if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+        perror("setsockopt");
+        exit(1);
+    }
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = ip.ip_dst.s_addr;
     
-	if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
-		perror("sendto");
-		exit(1);
-	}
+    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
+        perror("sendto");
+        exit(1);
+    }
     
     
     //RECV
     struct pcap_pkthdr header;
     const u_char *recPakcet =  pcap_next(handle, &header);
     
-        if(recPakcet!=NULL)
+    if(recPakcet!=NULL)
+    {
+        printf("\nJacked a packet with length of [%d]\n", header.caplen);
+        struct ip *iph = (struct ip*)(recPakcet+14);
+        logIpHeader(iph);
+        
+        //char *srcip = inet_ntoa(iph->ip_src);
+        //char *desip = inet_ntoa(iph->ip_dst);
+        cout<<inet_ntoa(iph->ip_src)<<endl;
+        cout<<inet_ntoa(iph->ip_dst)<<endl;
+        unsigned int proto = (unsigned)iph->ip_p;
+        if((strcmp(inet_ntoa(iph->ip_src), DEST_IP))==0)
         {
-            printf("\nJacked a packet with length of [%d]\n", header.caplen);
-            struct ip *iph = (struct ip*)(recPakcet+14);
-            logIpHeader(iph);
-
-            //char *srcip = inet_ntoa(iph->ip_src);
-            //char *desip = inet_ntoa(iph->ip_dst);
-            cout<<inet_ntoa(iph->ip_src)<<endl;
-            cout<<inet_ntoa(iph->ip_dst)<<endl;
-            unsigned int proto = (unsigned)iph->ip_p;
-            if((strcmp(inet_ntoa(iph->ip_src), DEST_IP))==0)
+            cout<<"-----------VALID----------"<<endl;
+            
+            if(proto==IPPROTO_ICMP )
             {
-                cout<<"-----------VALID----------"<<endl;
-                
-                if(proto==IPPROTO_ICMP )
-                {
-                    struct icmp *icmpHdr = (struct icmp*)(packet + 14 + 20);
-                    logICMPHeader(icmpHdr);
-                }
-
+                struct icmp *icmpHdr = (struct icmp*)(packet + 14 + 20);
+                logICMPHeader(icmpHdr);
             }
-            else
-                cout<<"-----------INVALID----------"<<endl;
             
         }
         else
-        {
-        }
-
+            cout<<"-----------INVALID----------"<<endl;
         
+    }
+    else
+    {
+    }
+    
+    
     close(sd);
     pcap_close(handle);
     return result;
@@ -299,13 +365,13 @@ void ScanController::populateProtocolNumberToScan()
 }
 void ScanController::scanPort(ScanRequest kRequest)
 {
-
+    
 }
 
 
 ScanResult ScanController::runUDPScan(ScanRequest kRequest)
 {
-	ScanResult status;
+    ScanResult status;
     status.srcPort = ntohs(kRequest.srcPort);
     status.destPort = ntohs(kRequest.destPort);
     status.srcIp = inet_ntoa(kRequest.src.sin_addr);
@@ -323,7 +389,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         dev = "lo0";
     else if(LOCALHST == 1 && APPLE ==0)
         dev = "lo";
-//#endif
+    //#endif
     cout<<dev;
     
     
@@ -358,71 +424,71 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     ////
     
     struct ip ip;
-	struct udphdr udp;
-	int sd;
-	const int on = 1;
-	struct sockaddr_in sin;
-	u_char *packet;
-
+    struct udphdr udp;
+    int sd;
+    const int on = 1;
+    struct sockaddr_in sin;
+    u_char *packet;
+    
     packet = (u_char *)malloc(60);
-
+    
 #pragma mark - set ip header for UDP packet
     ip.ip_hl = 0x5;
-	ip.ip_v = 0x4;
-	ip.ip_tos = 0x0;
-	ip.ip_len = 60;
-	ip.ip_id = htons(12830);
-	ip.ip_off = 0x0;
-	ip.ip_ttl = 64;
+    ip.ip_v = 0x4;
+    ip.ip_tos = 0x0;
+    ip.ip_len = 60;
+    ip.ip_id = htons(12830);
+    ip.ip_off = 0x0;
+    ip.ip_ttl = 64;
     //imp
-	ip.ip_p = IPPROTO_UDP;
+    ip.ip_p = IPPROTO_UDP;
     //
-	ip.ip_sum = 0x0;
+    ip.ip_sum = 0x0;
     //IMP
-	ip.ip_src.s_addr = inet_addr(SRC_IP);
-	ip.ip_dst.s_addr =  inet_addr(DEST_IP);
-	ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
+    ip.ip_src.s_addr = inet_addr(SRC_IP);
+    ip.ip_dst.s_addr =  inet_addr(DEST_IP);
+    ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
     //IMP
-	memcpy(packet, &ip, sizeof(ip));
-
-
+    memcpy(packet, &ip, sizeof(ip));
+    
+    
 #pragma mark - set UDP header
     //IMP
     udp.uh_sport = htons(SRC_PORT);
     udp.uh_dport = htons(kRequest.destPort);
     udp.uh_ulen = htons(8);
-
+    
     udp.uh_sum = 0;
     udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
-	memcpy(packet + 20, &udp, sizeof(udp));
+    memcpy(packet + 20, &udp, sizeof(udp));
     
     if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-		perror("raw socket");
-		exit(1);
-	}
-
-	if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-		perror("setsockopt");
-		exit(1);
-	}
-	memset(&sin, 0, sizeof(sin));
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = ip.ip_dst.s_addr;
-
-	if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
-		perror("sendto");
-		exit(1);
-	}
-//	if (sendto(sd, packet, 60, 0, (struct sockaddr *)&kRequest.dest, sizeof(struct sockaddr)) < 0)  {
-//		perror("sendto");
-//		exit(1);
-//	}
-
+        perror("raw socket");
+        exit(1);
+    }
+    
+    if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+        perror("setsockopt");
+        exit(1);
+    }
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = ip.ip_dst.s_addr;
+    
+    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
+        perror("sendto");
+        exit(1);
+    }
+    //	if (sendto(sd, packet, 60, 0, (struct sockaddr *)&kRequest.dest, sizeof(struct sockaddr)) < 0)  {
+    //		perror("sendto");
+    //		exit(1);
+    //	}
+    
     
     //RECV
     struct pcap_pkthdr header;
     const u_char *recPakcet ;//= pcap_next(handle, &header);
-
+    
     while((recPakcet = pcap_next(handle, &header))!=NULL){
         if(recPakcet!=NULL)
         {
@@ -441,12 +507,12 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
                 unsigned int type = (unsigned int)icmpHeader->icmp_type;
                 if(type==3 && (code==1 || code==2 || code==3 || code==9 || code ==10 || code==13))
                     status.udp_portState = kFiltered;
-
-//                struct ip* i_ip = (struct ip*)(packet + 14+20+8);
-//                logIpHeader(i_ip);
                 
-
-
+                //                struct ip* i_ip = (struct ip*)(packet + 14+20+8);
+                //                logIpHeader(i_ip);
+                
+                
+                
                 
             }
             
@@ -456,12 +522,12 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         {
             status.udp_portState = kOpenORFiltered;
         }
-
+        
         
     }
-          
-
-
+    
+    
+    
     
     
     //close socket
@@ -470,7 +536,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     
     close(sd);
     pcap_close(handle);
-	return status;
+    return status;
 }
 
 
@@ -480,36 +546,36 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
 {
     
     
-
+    
     ScanResult status;
     status.srcPort = ntohs(kRequest.srcPort);
     status.destPort = ntohs(kRequest.destPort);
     status.srcIp = inet_ntoa(kRequest.src.sin_addr);
     status.destIp = inet_ntoa(kRequest.dest.sin_addr);
     status.tcp_portState = kUnkown;
-
+    
     
     //// Set pcap parameters
     
     char *dev, errBuff[50];
     if(LOCALHST == 0)
-    dev = pcap_lookupdev(errBuff);
+        dev = pcap_lookupdev(errBuff);
     else if(LOCALHST == 1 && APPLE ==1)
         dev = "lo0";
     else if(LOCALHST == 1 && APPLE ==0)
         dev = "lo";
-   // cout<<dev;
+    // cout<<dev;
     
     
     pcap_t *handle;
     
-
+    
     struct bpf_program fp;
     
     //set filter exp depending upon source port
     char filter_exp[] = "icmp || dst port ";
     sprintf(filter_exp,"dst port %d",5678);
-   // cout<<"\n FILTER EXP "<<filter_exp;
+    // cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
     bpf_u_int32 net;
@@ -537,15 +603,15 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     struct ip ip;
     struct tcphdr tcp;
     const int on = 1;
-   // struct sockaddr_in sin;
+    // struct sockaddr_in sin;
     int sd;
     u_char *packet;
     packet = (u_char *)malloc(60);
     
     if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
-		perror("raw socket");
-		exit(1);
-	}
+        perror("raw socket");
+        exit(1);
+    }
     ip.ip_hl = 0x5;
     ip.ip_v = 0x4;
     ip.ip_tos = 0x0;
@@ -565,7 +631,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     tcp.th_dport = htons(kRequest.destPort);
     tcp.th_seq = htonl(0x131123);
     tcp.th_off = sizeof(struct tcphdr) / 4;
-//    tcp.th_flags = TH_SYN;
+    //    tcp.th_flags = TH_SYN;
     
     //set flag depending upon type of scan
     switch (kRequest.scanType) {
@@ -584,7 +650,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         case XMAS_SCAN:
             tcp.th_flags = (TH_FIN | TH_PUSH |TH_URG);
             break;
-    
+            
         default:
             break;
     }
@@ -601,19 +667,19 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     sin.sin_addr.s_addr = ip.ip_dst.s_addr;
     
     if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-		perror("setsockopt");
-		exit(1);
-	}
+        perror("setsockopt");
+        exit(1);
+    }
     
     if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
         perror("sendto");
         exit(1);
     }
-
     
-	
     
-
+    
+    
+    
     
     
     struct pcap_pkthdr header;
@@ -697,38 +763,38 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         {
             //Handle ICMP packets
         }
-
+        
         
     }
-     else if(recPakcet==NULL)
-     {
-         if(kRequest.scanType==XMAS_SCAN)
-             status.tcp_portState = kOpen;
-         if(kRequest.scanType == NULL_SCAN)
-             status.tcp_portState = kOpen;
-         if(kRequest.scanType == FIN_SCAN)
-             status.tcp_portState = kOpen;
-         
-         if(kRequest.scanType == SYN_SCAN)
-             status.tcp_portState = kFiltered;
-//             //need to retransmitt //needs to be done from the calling function
-         
-         
-         if(kRequest.scanType == ACK_SCAN)
-             status.tcp_portState = kFiltered;
-         
-         
-     }
+    else if(recPakcet==NULL)
+    {
+        if(kRequest.scanType==XMAS_SCAN)
+            status.tcp_portState = kOpen;
+        if(kRequest.scanType == NULL_SCAN)
+            status.tcp_portState = kOpen;
+        if(kRequest.scanType == FIN_SCAN)
+            status.tcp_portState = kOpen;
+        
+        if(kRequest.scanType == SYN_SCAN)
+            status.tcp_portState = kFiltered;
+        //             //need to retransmitt //needs to be done from the calling function
+        
+        
+        if(kRequest.scanType == ACK_SCAN)
+            status.tcp_portState = kFiltered;
+        
+        
+    }
     
     //*TO DO if packet is icmp
     //close socket
     //close pcap session
     close(sd);
     pcap_close(handle);
-  
+    
     return status;
-
-
+    
+    
 }
 
 
@@ -753,8 +819,8 @@ ScanRequest createScanRequestFor(int srcPort, int destPort, char *srcIp, char *d
     
     newRequest.scanType = kScanType;
     return newRequest;
-
-
+    
+    
 }
 
 
@@ -791,16 +857,16 @@ void printScanResultForPort(AllScanResultForPort kResult)
     cout<<"\nFIN  : "<<getStringForPortState(kResult.finState);
     cout<<"\nXMAS : "<<getStringForPortState(kResult.xmasState);
     cout<<endl<<"-----------------------------------------"<<endl;
-
-
+    
+    
 }
 
 
 
 void ScanController::scanPorts()
 {
-
-
+    
+    
     
     //for each port run TCP and UDP scan
     this->allPortsScanResultIndex = 0;
@@ -823,7 +889,7 @@ void ScanController::scanPorts()
         
         int port = this->portsToScan[index];
         //check which types of scan to be carried out
-
+        
         scanResults.portNo = port;
         
         if(this->typeOfScans[SYN_SCAN]==1)
@@ -834,7 +900,7 @@ void ScanController::scanPorts()
             syn_result = runTCPscan(synRequest);
             scanResults.synState = syn_result.tcp_portState;
             
-
+            
         }
         
         if(this->typeOfScans[ACK_SCAN] == 1)
@@ -853,7 +919,7 @@ void ScanController::scanPorts()
         
         if(this->typeOfScans[FIN_SCAN] == 1)
         {
-
+            
             ScanRequest finReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, FIN_SCAN);
             fin_result = runTCPscan(finReq);
             scanResults.finState = fin_result.tcp_portState;
@@ -864,7 +930,7 @@ void ScanController::scanPorts()
             xmas_result = runTCPscan(xmasReq);
             scanResults.xmasState = fin_result.tcp_portState;
         }
-
+        
         if(this->typeOfScans[UDP_SCAN]==1)
         {
             ScanRequest udpReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, UDP_SCAN);
@@ -882,21 +948,21 @@ void ScanController::scanPorts()
         
     }
     
-
+    
 }
 
 ScanController::~ScanController() {
-	// TODO Auto-generated destructor stub
-
+    // TODO Auto-generated destructor stub
+    
 }
 
 
 ScanController* ScanController::shared()
 {
-	if(sharedInstance==NULL)
-		sharedInstance = new ScanController();
-
-	return sharedInstance;
+    if(sharedInstance==NULL)
+        sharedInstance = new ScanController();
+    
+    return sharedInstance;
 }
 
 

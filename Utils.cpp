@@ -7,38 +7,68 @@
 
 #include "Utils.h"
 #include <string.h>
+#include <stdio.h>
+#include <fstream>
+#include <sstream>
+#include<iostream>
 #include <stdlib.h>
+#include<vector>
+using namespace std;
+
+
+
+void flushArray(int *arr,int len)
+{
+    for (int i=0; i<len; i++) {
+        arr[i]=INVALID_PORT;
+    }
+}
 
 char *scanNumToString(int scanType)
 {
 	char *str = new char[10]();
 	switch(scanType)
 	{
-	case SYN_SCAN:
-		strcpy(str,"SYN SCAN");
-		break;
-	case FIN_SCAN:
-		strcpy(str,"FIN SCAN");
-		break;
-	case ACK_SCAN:
-		strcpy(str,"ACK SCAN");
-		break;
-	case NULL_SCAN:
-		strcpy(str,"NULL SCAN");
-		break;
-	case XMAS_SCAN:
-		strcpy(str,"XMAS SCAN");
-		break;
-	case PROTO_SCAN:
-		strcpy(str,"PROTOCOL SCAN");
-		break;
-	default:
-		strcpy(str,"Unknown scan type!!");
-		break;
-
+        case SYN_SCAN:
+            strcpy(str,"SYN");
+            break;
+        case FIN_SCAN:
+            strcpy(str,"FIN");
+            break;
+        case ACK_SCAN:
+            strcpy(str,"ACK");
+            break;
+        case NULL_SCAN:
+            strcpy(str,"NULL");
+            break;
+        case XMAS_SCAN:
+            strcpy(str,"XMAS");
+            break;
+        case PROTO_SCAN:
+            strcpy(str,"PROTOCOL");
+            break;
+        default:
+            strcpy(str,"Unknown scan type!!");
+            break;
+            
 	}
 	return str;
+    
+}
 
+int scanStringToNumber(char* scanType)
+{
+	if(strcmp(scanType,"SYN")==0)
+		return SYN_SCAN;
+	else if(strcmp(scanType,"NULL")==0)
+		return NULL_SCAN;
+	else if(strcmp(scanType,"FIN")==0)
+		return FIN_SCAN;
+	else if(strcmp(scanType,"XMAS")==0)
+		return XMAS_SCAN;
+	else if(strcmp(scanType,"ACK")==0)
+		return ACK_SCAN;
+	else return UNKNOWN_SCAN;
 }
 
 int getPacketSizeForScanType(int scanType)
@@ -95,14 +125,14 @@ char* statusToStr(portStates state)
 	memset(str,0,20);
 	switch(state)
 	{
-	case kOpen: strcpy(str,"Open");break;
-	case kClosed: strcpy(str,"Closed");break;
-	case kFiltered: strcpy(str,"Filtered");break;
-	case kUnFiltered: strcpy(str,"UnFiltered"); break;
-	default: strcpy(str,"Invalid state"); break;
-
+        case kOpen: strcpy(str,"Open");break;
+        case kClosed: strcpy(str,"Closed");break;
+        case kFiltered: strcpy(str,"Filtered");break;
+        case kUnFiltered: strcpy(str,"UnFiltered"); break;
+        default: strcpy(str,"Invalid state"); break;
+            
 	}
-
+    
 	return str;
 }
 
@@ -141,5 +171,43 @@ unsigned short csum(unsigned short *ptr,int nbytes)
 	answer=(short)~sum;
     
 	return(answer);
+}
+
+void readHelpFile(char *fileName)
+{
+    ifstream infile;
+    infile.open(fileName);
+    string line, contents;
+    
+    if (infile.is_open())
+    {
+        while (!infile.eof())
+        {
+            getline(infile, line);
+            cout<<line<<endl;
+            contents = contents + line + "\n";
+        }
+    }
+    
+}
+
+void readIPFile(char *fileName)
+{
+	ifstream infile;
+	int ipAddressList[65535];
+	vector<string> ipaddStringList;
+	ipaddStringList.clear();
+	infile.open(fileName);
+	string line, contents;
+    
+	if (infile.is_open())
+	{
+		while (!infile.eof())
+		{
+			getline(infile, line);
+			cout<<line<<endl;
+			ipaddStringList.push_back(line);
+		}
+	}
 }
 
