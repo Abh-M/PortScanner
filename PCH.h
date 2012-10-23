@@ -35,7 +35,6 @@
 #include <netinet/if_ether.h>
 #include <netinet/ip_icmp.h>
 
-#include "Globals.h"
 
 
 #endif

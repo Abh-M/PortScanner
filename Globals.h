@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
-
+#include "PCH.h"
 
 #pragma mark - constants
 #define SETLOCAL 0
@@ -200,19 +200,34 @@ typedef enum
 }JobType;
 
 
-typedef struct Job
+typedef struct kJob
 {
-    int jobId;
+    int jobId; //this is index to the Jobs list
     int srcPort;
     int desPort;
     char *srcIp;
     char *desIp;
     JobType type;
-    
+    int scanTypeToUse[7];
+    AllScanResultForPort result;
 }Job;
 
+typedef struct kWorker
+{
+    int workerId;
+    pthread_t thread_id;
+    
+} Worker;
 
 
+//
+#define MAX_WORKERS 5
+#define JOB_START_INDEX 0
+#define JOB_END_INDEX 1
+#define JOB_CURRENT_INDEX 2
+#define NO_JOB -99
+#define NOT_STARTED -1
+//
 
 
 

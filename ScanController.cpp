@@ -29,7 +29,15 @@
 #include "PCH.h"
 using namespace std;
 
+
 #include "Utils.h"
+
+Job allJobs[MAX_PORTS];
+int totalJobs=0;
+int currentJob;
+Worker workers[MAX_WORKERS];
+int workDistribution[MAX_WORKERS][3];
+
 
 static ScanController *sharedInstance;
 ScanController::ScanController() {
@@ -696,23 +704,11 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         {
             struct tcphdr *tcpHdr = (struct tcphdr*)(recPakcet + 34);
             logTCPHeader(tcpHdr);
-
+            
             //check if src and destination ports are valid
             //get which flags are set in the response
             unsigned char flags = tcpHdr->th_flags;
             
-//            if(kRequest.scanType == SYN_SCAN)
-//            {
-//                if( (flags & TH_SYN) && (flags & TH_ACK))
-//                    status.tcp_portState = kOpen;
-//                else if (flags & TH_SYN)
-//                    status.tcp_portState = kOpen;
-//                else if(flags & TH_RST)
-//                    status.tcp_portState = kClosed;
-//                else
-//                    status.tcp_portState = kClosedAndUnfiltered;
-//                
-//            }
             
             switch (kRequest.scanType) {
                 case SYN_SCAN:
@@ -773,8 +769,8 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             switch (kRequest.scanType) {
                 case SYN_SCAN:
                 {
-                  if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
-                      status.tcp_portState = kFiltered;
+                    if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
+                        status.tcp_portState = kFiltered;
                 }
                     break;
                     
@@ -785,33 +781,33 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
                 }
                     break;
                     
-//                case NULL_SCAN:
-//                {
-//                    if (flags & TH_RST) {
-//                        status.tcp_portState = kClosedAndUnfiltered;
-//                    }
-//                }
-//                    break;
-//                    
-//                case FIN_SCAN:
-//                {
-//                    if(flags & TH_RST)
-//                        status.tcp_portState = kClosedAndUnfiltered;
-//                }
-//                    break;
-//                    
-//                case XMAS_SCAN:
-//                {
-//                    if(flags & TH_RST)
-//                        status.tcp_portState = kClosedAndUnfiltered;
-//                }
+                    //                case NULL_SCAN:
+                    //                {
+                    //                    if (flags & TH_RST) {
+                    //                        status.tcp_portState = kClosedAndUnfiltered;
+                    //                    }
+                    //                }
+                    //                    break;
+                    //
+                    //                case FIN_SCAN:
+                    //                {
+                    //                    if(flags & TH_RST)
+                    //                        status.tcp_portState = kClosedAndUnfiltered;
+                    //                }
+                    //                    break;
+                    //
+                    //                case XMAS_SCAN:
+                    //                {
+                    //                    if(flags & TH_RST)
+                    //                        status.tcp_portState = kClosedAndUnfiltered;
+                    //                }
                     
                 default:
                     break;
             }
-
             
-
+            
+            
         }
         
         
@@ -872,6 +868,7 @@ ScanRequest createScanRequestFor(int srcPort, int destPort, char *srcIp, char *d
 
 char *getStringForPortState(portStates kState)
 {
+    
     char *str = "Not Used";
     switch (kState) {
         case kOpen:str="open";break;
@@ -1010,6 +1007,133 @@ ScanController* ScanController::shared()
     return sharedInstance;
 }
 
+void ScanController::setUpJobsAndJobDistribution()
+{
+    
+    totalJobs = this->totalPortsToScan;
+    
+    for(int jobId=0;jobId<this->totalPortsToScan;jobId++)
+    {
+        
+        int destport = this->portsToScan[jobId];
+        
+        Job newJob;
+        newJob.jobId = jobId;
+        newJob.type = kPortScan;
+        newJob.srcPort = SRC_PORT;
+        newJob.desPort = destport;
+        newJob.srcIp = this->sourceIP;
+        newJob.desIp = this->targetIP;
+        newJob.scanTypeToUse[SYN_SCAN] = this->typeOfScans[SYN_SCAN];
+        newJob.scanTypeToUse[ACK_SCAN] = this->typeOfScans[ACK_SCAN];
+        newJob.scanTypeToUse[FIN_SCAN] = this->typeOfScans[FIN_SCAN];
+        newJob.scanTypeToUse[NULL_SCAN] = this->typeOfScans[NULL_SCAN];
+        newJob.scanTypeToUse[XMAS_SCAN] = this->typeOfScans[XMAS_SCAN];
+        newJob.scanTypeToUse[UDP_SCAN] = this->typeOfScans[UDP_SCAN];
+        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
+        //        newJob.result
+        
+        allJobs[jobId]=newJob;
+        
+    }
+    
+    
+    int jobsPerWorker = totalJobs/MAX_WORKERS;
+    int temp_totalJobs = totalJobs;
+    for (int workerId =0; workerId<MAX_WORKERS; workerId++) {
+        
+        
+        Worker newWorker;
+        newWorker.workerId = workerId;
+        
+        int startindex = workerId*jobsPerWorker;
+        int endindex=-1;
+        if(workerId==(MAX_WORKERS-1))//last worker check  remaining jobs
+        {
+            endindex = totalJobs-1;
+            temp_totalJobs = temp_totalJobs - temp_totalJobs;
+        }
+        else{
+            endindex = startindex + jobsPerWorker-1;
+            temp_totalJobs = temp_totalJobs - jobsPerWorker;
+        }
+        
+        
+        
+        workDistribution[workerId][JOB_START_INDEX] = startindex;
+        workDistribution[workerId][JOB_END_INDEX] =  endindex;
+        workDistribution[workerId][JOB_CURRENT_INDEX] = NOT_STARTED;
+    }
+    
+    
+    
+    
+}
 
 
+Job* getBonusJobForWorker(int kWorkerId)
+{
+    Job nJob;
+    Job *nextJob = NULL;
+    for(int wkr=0;wkr<MAX_WORKERS;wkr++)
+    {
+        if(kWorkerId!=wkr)
+            //look for pending jobs of other workers
+        {
+            int currJob = workDistribution[wkr][JOB_CURRENT_INDEX];
+            int startJob = workDistribution[wkr][JOB_START_INDEX];
+            int endJob = workDistribution[wkr][JOB_END_INDEX];
+            if(currJob<endJob)
+            {
+                if(currJob==-1)
+                    currJob = startJob;
+                else
+                    currJob++;
+                nJob = allJobs[currJob];
+                nextJob = &nJob;
+                workDistribution[wkr][JOB_CURRENT_INDEX] = currJob;
+                break;
+            }
+        }
+    }
+    return nextJob;
+    
+}
 
+
+Job*  ScanController::getNextJob(int kWorkerId)
+{
+    Job nJob;
+    Job *nextJob = NULL;
+    
+    int curretJob = workDistribution[kWorkerId][JOB_CURRENT_INDEX];
+    int startJob = workDistribution[kWorkerId][JOB_START_INDEX];
+    int endJob = workDistribution[kWorkerId][JOB_END_INDEX];
+    
+    //when this is the first job
+    if(!(curretJob == endJob))
+    {
+        if(curretJob==-1)
+            curretJob = startJob;
+        else
+            curretJob++;
+
+            workDistribution[kWorkerId][JOB_CURRENT_INDEX] = curretJob;
+        nJob = allJobs[curretJob];
+        nextJob = &nJob;
+        
+    }
+    else if(curretJob == endJob)
+    {
+        //all jobs are complete look for additional job
+        nextJob =getBonusJobForWorker(kWorkerId);
+    }
+    return nextJob;
+    
+}
+
+
+void submitJob(Job *)
+{
+    
+}

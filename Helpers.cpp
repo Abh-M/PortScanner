@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include "Helpers.h"
+#include "Globals.h"
 
 using namespace std;
 

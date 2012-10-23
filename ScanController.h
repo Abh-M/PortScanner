@@ -10,6 +10,7 @@
 
 
 #include "PCH.h"
+#include "Globals.h"
 //struct scanResult
 //{
 //	int syn,rst,psh,ack,fin,urg;
@@ -19,6 +20,8 @@
 
 
 using namespace std;
+
+
 
 
 class ScanController {
@@ -83,7 +86,8 @@ public:
     void                    flushPortsList();
     void                    populatePortsList(int array[]);
     void                    populatePortsList(int kStart, int kEnd);
-    
+    void                    setUpJobsAndJobDistribution();
+    Job*                    getNextJob(int kWorkerId);
 };
 
 #endif /* SCANCONTROLLER_H_ */
