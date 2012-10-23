@@ -17,27 +17,31 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <errno.h>
-//#define __FAVOR_BSD
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
-//#include <linux/types.h>
 #include <netdb.h>
 #include "Helpers.h"
 #include "PCH.h"
+#include "Utils.h"
 using namespace std;
 
 
-#include "Utils.h"
 
 Job allJobs[MAX_PORTS];
+sem_t mutex_allJobs;
 int totalJobs=0;
+sem_t mutex_totalJobs;
 int currentJob;
+sem_t mutex_currJob;
 Worker workers[MAX_WORKERS];
 int workDistribution[MAX_WORKERS][3];
-
+sem_t mutex_wrkD;
+pthread_t allWorkerThreads[MAX_WORKERS];
+//sem_t kMutex;
+pthread_mutex_t kMutex;
 
 static ScanController *sharedInstance;
 ScanController::ScanController() {
@@ -92,8 +96,6 @@ void ScanController::resetAllScanTypes()
 }
 
 
-
-
 void ScanController::printScanTypeConf()
 {
     for (int i=0; i<7; i++) {
@@ -101,6 +103,7 @@ void ScanController::printScanTypeConf()
             cout<<"\n"<<scanNumToString(i);
     }
 }
+
 void ScanController::setTargetIPAddress(char *kSourceIp,char *kTargetIp)
 {
     this->sourceIP = kSourceIp;
@@ -389,7 +392,6 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     status.udp_portState = kUnkown;
     
     
-#pragma mark - set pcap for UDP
     //// Set pcap parameters
     
     char *dev, errBuff[50];
@@ -462,7 +464,6 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     memcpy(packet, &ip, sizeof(ip));
     
     
-#pragma mark - set UDP header
     //IMP
     udp.uh_sport = htons(SRC_PORT);
     udp.uh_dport = htons(kRequest.destPort);
@@ -781,27 +782,6 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
                 }
                     break;
                     
-                    //                case NULL_SCAN:
-                    //                {
-                    //                    if (flags & TH_RST) {
-                    //                        status.tcp_portState = kClosedAndUnfiltered;
-                    //                    }
-                    //                }
-                    //                    break;
-                    //
-                    //                case FIN_SCAN:
-                    //                {
-                    //                    if(flags & TH_RST)
-                    //                        status.tcp_portState = kClosedAndUnfiltered;
-                    //                }
-                    //                    break;
-                    //
-                    //                case XMAS_SCAN:
-                    //                {
-                    //                    if(flags & TH_RST)
-                    //                        status.tcp_portState = kClosedAndUnfiltered;
-                    //                }
-                    
                 default:
                     break;
             }
@@ -827,10 +807,9 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         
     }
     
-    //*TO DO if packet is icmp
     //close socket
-    //close pcap session
     close(sd);
+    //close pcap session
     pcap_close(handle);
     
     return status;
@@ -1105,7 +1084,9 @@ Job*  ScanController::getNextJob(int kWorkerId)
 {
     Job nJob;
     Job *nextJob = NULL;
-    
+
+    pthread_mutex_lock(&kMutex);
+
     int curretJob = workDistribution[kWorkerId][JOB_CURRENT_INDEX];
     int startJob = workDistribution[kWorkerId][JOB_START_INDEX];
     int endJob = workDistribution[kWorkerId][JOB_END_INDEX];
@@ -1126,8 +1107,10 @@ Job*  ScanController::getNextJob(int kWorkerId)
     else if(curretJob == endJob)
     {
         //all jobs are complete look for additional job
-        nextJob =getBonusJobForWorker(kWorkerId);
+        //nextJob =getBonusJobForWorker(kWorkerId);
     }
+    pthread_mutex_unlock(&kMutex);
+
     return nextJob;
     
 }
@@ -1135,5 +1118,54 @@ Job*  ScanController::getNextJob(int kWorkerId)
 
 void submitJob(Job *)
 {
+    
+}
+void printJobInfo(Job *kJob, int wrk)
+{
+    //cout<<"\n-------Printing job info for worker :"<<wrk<<"---------------";
+    cout<<"\n PORT : "<<kJob->desPort<<": "<<wrk;
+    cout<<"\n----------------";
+
+}
+
+void* handleJob(void *arg)
+{
+
+    
+    int myId = ((Worker *)arg)->workerId;
+    cout<<"\nI am worker"<<myId<<endl;
+    Job *nextJob = NULL;
+    sleep(1);
+    while (1) {
+        nextJob = sharedInstance->getNextJob(myId);
+        if(nextJob != NULL)
+        printJobInfo(nextJob,myId);
+        if(nextJob == NULL)
+            break;
+        
+
+    }
+    pthread_exit(arg);
+}
+
+void ScanController::scanPortsWithThread()
+{
+    
+    pthread_mutex_init(&kMutex, NULL);
+ //   kMutex = PTHREAD_MUTEX_INITIALIZER;
+    int j[MAX_WORKERS];
+    for (int i=0; i<MAX_WORKERS; i++) {
+        j[i] = i;
+        pthread_create(&allWorkerThreads[i], NULL, handleJob, (void*)&j[i]);
+        
+    }
+    
+    void *result;
+    
+    for(int i=0; i<MAX_WORKERS;i++)
+    {
+        pthread_join(allWorkerThreads[i], &result);
+        cout<<"\n Exit : "<<*(int *)result;
+    }
     
 }

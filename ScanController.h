@@ -88,6 +88,7 @@ public:
     void                    populatePortsList(int kStart, int kEnd);
     void                    setUpJobsAndJobDistribution();
     Job*                    getNextJob(int kWorkerId);
+    void                    scanPortsWithThread();
 };
 
 #endif /* SCANCONTROLLER_H_ */

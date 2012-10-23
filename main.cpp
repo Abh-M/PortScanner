@@ -205,20 +205,21 @@ int main(int argc, const char * argv[])
     //set source and destination IP address and then start scan
     con->setTargetIPAddress(SRC_IP, DEST_IP);
     con->setUpJobsAndJobDistribution();
+    con->scanPortsWithThread();
     //con->scanPorts();
     
-    Job *j = con->getNextJob(0);
-    j=con->getNextJob(1);
-    j=con->getNextJob(2);
-    j=con->getNextJob(3);
-    j=con->getNextJob(4);
-    j=con->getNextJob(1);
-    j=con->getNextJob(1);
-    j=con->getNextJob(0);
-    j=con->getNextJob(3);
-    j=con->getNextJob(3);
-    j=con->getNextJob(2);
-    j=con->getNextJob(1);
+//    Job *j = con->getNextJob(0);
+//    j=con->getNextJob(1);
+//    j=con->getNextJob(2);
+//    j=con->getNextJob(3);
+//    j=con->getNextJob(4);
+//    j=con->getNextJob(1);
+//    j=con->getNextJob(1);
+//    j=con->getNextJob(0);
+//    j=con->getNextJob(3);
+//    j=con->getNextJob(3);
+//    j=con->getNextJob(2);
+//    j=con->getNextJob(1);
 //con->scanPorts();
 //    con->printScanTypeConf();
 //    con->scanPorts();
