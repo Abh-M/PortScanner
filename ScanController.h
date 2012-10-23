@@ -21,66 +21,6 @@
 using namespace std;
 
 
-typedef struct AllScanResult
-{
-    
-    int portNo;
-    portStates synState;
-    portStates ackState;
-    portStates finState;
-    portStates nullState;
-    portStates xmasState;
-    portStates udpState;
-    
-}AllScanResultForPort;
-
-struct TcpFlags
-{
-    bool isSYN;
-    bool isACK;
-    bool isRST;
-    bool isFIN;
-    bool isPSH;
-    bool isURG;
-};
-
-struct ScanResult
-{
-    
-	portStates tcp_portState;
-    portStates udp_portState;
-	int destPort;
-    int srcPort;
-    char *srcIp;
-    char *destIp;
-    
-};
-
-struct ScanRequest
-{
-    
-    int srcPort;
-    int destPort;
-    int scanType;
-    char *sourceIp;
-    char *destIp;
-    struct sockaddr_in src;
-    struct sockaddr_in dest;
-};
-
-
-typedef struct ProtocolScanRequest
-{
-    int protocolNumber;
-    
-}ProtocolScanRequest;
-
-typedef struct ProtocolScanResult
-{
-    int protocolNumber;
-    bool protocolSupported;
-}ProtocolScanResult;
-
 class ScanController {
 public:
     

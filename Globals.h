@@ -7,6 +7,8 @@
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 
+
+#pragma mark - constants
 #define SETLOCAL 0
 /* COMMAND LINE ARGS
  *     --help <display invocation options>
@@ -73,6 +75,9 @@
 #define PROTO_SCAN 5
 #define UDP_SCAN   6
 #define UNKNOWN_SCAN -1
+
+
+
 typedef enum{
     kSYN,
     kACK,
@@ -119,6 +124,98 @@ struct psd_tcp {
 	unsigned short tcp_len;
 	struct tcphdr tcp;
 };
+
+#pragma mark - structures
+
+
+//////////////////////////////////////////////////////////////////
+
+
+typedef struct AllScanResult
+{
+    /* structure to store scan result of various types for a particular port*/
+    int portNo;
+    portStates synState;
+    portStates ackState;
+    portStates finState;
+    portStates nullState;
+    portStates xmasState;
+    portStates udpState;
+    
+}AllScanResultForPort;
+
+struct TcpFlags
+{
+    bool isSYN;
+    bool isACK;
+    bool isRST;
+    bool isFIN;
+    bool isPSH;
+    bool isURG;
+};
+
+struct ScanResult
+{
+    
+	portStates tcp_portState;
+    portStates udp_portState;
+	int destPort;
+    int srcPort;
+    char *srcIp;
+    char *destIp;
+    
+};
+
+struct ScanRequest
+{
+    
+    int srcPort;
+    int destPort;
+    int scanType;
+    char *sourceIp;
+    char *destIp;
+    struct sockaddr_in src;
+    struct sockaddr_in dest;
+};
+
+
+typedef struct ProtocolScanRequest
+{
+    int protocolNumber;
+    
+}ProtocolScanRequest;
+
+typedef struct ProtocolScanResult
+{
+    int protocolNumber;
+    bool protocolSupported;
+}ProtocolScanResult;
+
+
+typedef enum
+{
+    kProtocolScan,
+    kPortScan,
+    
+}JobType;
+
+
+typedef struct Job
+{
+    int jobId;
+    int srcPort;
+    int desPort;
+    char *srcIp;
+    char *desIp;
+    JobType type;
+    
+}Job;
+
+
+
+
+
+
 
 
 
