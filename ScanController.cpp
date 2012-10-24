@@ -228,7 +228,8 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     ProtocolScanResult result;
     result.protocolNumber = req.protocolNumber;
     result.protocolSupported = false;
-    
+    result.icmp_code = INVALID_CODE;
+    result.icmp_type = INVALID_TYPE;
     //// Set pcap parameters
     
     char *dev, errBuff[50];
@@ -269,6 +270,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     struct ip ip;
     int sd;
+    int ip_id = rand()%100+1;
     const int on = 1;
     struct sockaddr_in sin;
     u_char *packet;
@@ -279,7 +281,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     ip.ip_v = 0x4;
     ip.ip_tos = 0x0;
     ip.ip_len = 60;
-    ip.ip_id = htons(12830);
+    ip.ip_id = htons(ip_id);
     ip.ip_off = 0x0;
     ip.ip_ttl = 64;
     //imp
@@ -367,39 +369,39 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         printf("\nJacked a packet with length of [%d]\n", header.caplen);
         struct ip *iph = (struct ip*)(recPakcet+14);
         
-        //char *srcip = inet_ntoa(iph->ip_src);
-        //char *desip = inet_ntoa(iph->ip_dst);
-        //cout<<inet_ntoa(iph->ip_src)<<endl;
-        //cout<<inet_ntoa(iph->ip_dst)<<endl;
         unsigned int proto = (unsigned)iph->ip_p;
         if((strcmp(inet_ntoa(iph->ip_src), req.destIp))==0)
         {
-//            logIpHeader(iph);
-
-            
             if(proto==IPPROTO_ICMP )
             {
                 cout<<"\n Protocol Number "<<req.protocolNumber<<endl;
-                struct icmp *icmpHdr = (struct icmp*)(packet  + 20);
-                logICMPHeader(icmpHdr);
-//                struct ip *p =(struct ip*)(packet+14+20+8);
-//                logIpHeader(p);
+                struct icmp *icmpHdr = (struct icmp*)(recPakcet  + 20 + 14);
+                struct ip *p =(struct ip*)(recPakcet+14+20+8);
+                cout<<"\n....."<<ntohs(p->ip_id)<<"----"<<ip_id;
+                if(ntohs(p->ip_id)==ip_id)
+                {
+                    logICMPHeader(icmpHdr);
+                    logIpHeader(p);
+                    result.icmp_code = (unsigned int)icmpHdr->icmp_code;
+                    result.icmp_type = (unsigned int)icmpHdr->icmp_type;
+                }
+
+
             }
             else{
-                cout<<"\n response Protocol Number "<<proto;
-//                result.protocolSupported = true;
+                cout<<"\n Other Protocol Number "<<proto;
             }
-            
         }
         else
         {
-            //invalid packet recieved
+            cout<<"\n Invalid  packet";
             result.protocolSupported = false;
         }
         
     }
     else //no packet recieved
     {
+        cout<<"\n Did not recieve packet";
         result.protocolSupported = false;
     }
     
@@ -963,7 +965,8 @@ void printProtocolScanResult(ProtocolScanResult kResult)
 {
     cout<<endl<<"-----------------------------------------"<<endl;
     cout<<"\nProtocol Number : "<<kResult.protocolNumber;
-
+    if(kResult.icmp_type != INVALID_TYPE && kResult.icmp_code != INVALID_CODE)
+        cout<<"\n ICMP type: "<<kResult.icmp_type<<" code :"<<kResult.icmp_code;
     if(kResult.protocolSupported)
         cout<<" : Protocol  Supported";
     else
@@ -1050,16 +1053,16 @@ void ScanController::scanPorts()
         else if(nextJob.type == kProtocolScan)
         {
             
-            nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
-            ProtocolScanRequest protoScanReq;
-            protoScanReq.protocolNumber = nextJob.protocolNumber;
-            protoScanReq.srcPort = nextJob.srcPort;
-            protoScanReq.sourceIp = nextJob.srcIp;
-            protoScanReq.destIp = nextJob.desIp;
-            ProtocolScanResult protoScanResult = runScanForProtocol(protoScanReq);
-            nextJob.protocolScanResult = protoScanResult;
-            //            cout<<"\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<nextJob.protocolNumber;
-            //submitJob(nextJob);
+//            nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
+//            ProtocolScanRequest protoScanReq;
+//            protoScanReq.protocolNumber = nextJob.protocolNumber;
+//            protoScanReq.srcPort = nextJob.srcPort;
+//            protoScanReq.sourceIp = nextJob.srcIp;
+//            protoScanReq.destIp = nextJob.desIp;
+//            ProtocolScanResult protoScanResult = runScanForProtocol(protoScanReq);
+//            nextJob.protocolScanResult = protoScanResult;
+//            //            cout<<"\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<nextJob.protocolNumber;
+//            //submitJob(nextJob);
         }
     }
     

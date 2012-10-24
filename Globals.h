@@ -52,12 +52,14 @@
 #define ARG_FILE "--file"
 #define ARG_SPEED "--speedup"
 #define ARG_SCAN "--scan"
-#define ARG_PROTO "protocol-range"
+#define ARG_PROTO "--pr"
 
-
+#define HELP_FILE "help.txt"
+#define SUBNET_IP_FILE "subnetips.txt"
 
 #define INVALID_PORT -1
-
+#define INVALID_CODE -99
+#define INVALID_TYPE -99
 
 //Type of scans
 #define SYN_SCAN   0
@@ -192,6 +194,8 @@ typedef struct ProtocolScanResult
 {
     int protocolNumber;
     bool protocolSupported;
+    int icmp_code;
+    int icmp_type;
 }ProtocolScanResult;
 
 

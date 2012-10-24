@@ -21,5 +21,6 @@ char *getStringForPortState(portStates kState);
 int scanStringToNumber(char* scanType);
 char *scanNumToString(int scanType);
 void flushArray(int *arr,int len);
+void getAllIPAddressesInSubnet(char* networkAddress, char* mask);
 
 #endif /* UTILS_H_ */

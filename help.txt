@@ -1,0 +1,15 @@
+-------------------------------------------------------------------------------------------
+Welcome to PortScanner
+
+Available commands
+
+* portScanner [ help | ports | ip | prefix | file | speedup | scan | protocol-range ]
+	--help <display invocation options>
+	--ports <ports to scan>
+	--ip <IP address to scan>
+	--prefix <IP prefix to scan>
+	--file <file name containing IP addresses to scan>
+	--speedup <parallel threads to use>
+	--scan <one or more scans>
+	--protocol-range <transport layer protocols to scan>
+-------------------------------------------------------------------------------------------

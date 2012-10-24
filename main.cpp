@@ -18,13 +18,6 @@ using namespace std;
 int main(int argc, const char * argv[])
 {
     
-//    char  *ip = "129.79.247.149";
-//    scanHTTP(ip);
-//    return 0;
-    
-    
-//   devAndIp res =  getMyIpAddress();
-//    return 0;
     
 	ScanController *con =  ScanController::shared();
     
@@ -40,12 +33,11 @@ int main(int argc, const char * argv[])
 		char *param = strtok((char *)arg, argSeperator);
 		cout<<"Param="<<param<<endl;
 		char* val = NULL;
-        //		if(strcmp(param, ARG_HELP)==0)
-        //		{
-        //			readHelpFile(HELP_FILE);
-        //            //as help is a standalone argument return and don't process further commands
-        //			return 0;
-        //		}
+		if(strcmp(param, ARG_HELP)==0)
+		{
+			readHelpFile(HELP_FILE);
+			return 0;
+		}
 		if((strstr(param, ARG_PORTS))!=NULL)
 		{
             flushArray(portsList, MAX_PORTS);
@@ -99,11 +91,27 @@ int main(int argc, const char * argv[])
             
             
 		}
-        //		if((strcmp(param, ARG_PREFIX))==0){}
-        //        //read ip prefix
-        //		{
-        //
-        //		}
+		if((strstr(param, ARG_PREFIX))!=NULL)
+            //read ip prefix
+		{
+			char*prefix = strtok((char *)param, valueSeperator);
+			char *networkIP;
+			char *mask;
+			cout<<prefix;
+			while ((val = strtok(NULL, valueSeperator))!=NULL)
+			{
+				networkIP = strtok(val,"/");
+				//cout<<"IP:"<<networkIP;
+				if(networkIP!=NULL)
+				{
+					mask = strtok(NULL,"/");
+				}
+				//cout<<"mask"<<mask<<endl;
+			}
+			getAllIPAddressesInSubnet(networkIP, mask);
+            
+            
+		}
 		if((strcmp(param, ARG_FILE))==0)
 		{
 			cout<<"Reading From File!"<<endl;
@@ -158,52 +166,55 @@ int main(int argc, const char * argv[])
 			}
 		}
         
-        //		if((strstr(param,ARG_PROTO))!=NULL)
-        //		{
-        //            //seperate protocols to scan according to whether user has entered range or individual protocol numbers.
-        //			char*protocols= strtok((char *)param, valueSeperator);
-        //            //cout<<"Protocols"<<protocols;
-        //			int endProtocol;
-        //			int startProtocol;
-        //			int protocolList[255];
-        //			while ((val = strtok(NULL, valueSeperator))!=NULL)
-        //			{
-        //				char *value;
-        //                //Range of protocols found.
-        //				if(strstr(val,"-")!=NULL)
-        //				{
-        //					value = strtok(val,"[-]");
-        //                    //con->startPort = atoi(value);
-        //					startProtocol = atoi(value);
-        //
-        //					while(value!=NULL)
-        //					{
-        //						endProtocol = atoi(value);
-        //						value = strtok(NULL,"[-]");
-        //
-        //					}
-        //					cout<<"start Protocol:"<<startProtocol<<endl;
-        //					cout<<"end Protocol:"<<endProtocol;
-        //				}
-        //				else if(strstr(val,",")!=NULL)
-        //				{
-        //                    //list of ports found
-        //					int i=1;
-        //					value = strtok(val,",");
-        //					protocolList[0]=atoi(value);
-        //                    //cout<<portsList[0];
-        //					while(value!=NULL)
-        //					{
-        //						value = strtok(NULL,",");
-        //						if(value!=NULL)
-        //						{
-        //							protocolList[i] = atoi(value);
-        //							i++;
-        //						}
-        //					}
-        //				}
-        //			}
-        //		}
+        if((strstr(param,ARG_PROTO))!=NULL)
+        {
+            //seperate protocols to scan according to whether user has entered range or individual protocol numbers.
+            char*protocols= strtok((char *)param, valueSeperator);
+            //cout<<"Protocols"<<protocols;
+            int endProtocol;
+            int startProtocol;
+            int protocolList[255];
+            flushArray(protocolList, 255);
+            while ((val = strtok(NULL, valueSeperator))!=NULL)
+            {
+                char *value;
+                //Range of protocols found.
+                if(strstr(val,"-")!=NULL)
+                {
+                    value = strtok(val,"[-]");
+                    //con->startPort = atoi(value);
+                    startProtocol = atoi(value);
+                    
+                    while(value!=NULL)
+                    {
+                        endProtocol = atoi(value);
+                        value = strtok(NULL,"[-]");
+                        
+                    }
+                    cout<<"start Protocol:"<<startProtocol<<endl;
+                    cout<<"end Protocol:"<<endProtocol;
+                }
+                else if(strstr(val,",")!=NULL)
+                {
+                    //list of ports found
+                    int i=1;
+                    value = strtok(val,",");
+                    protocolList[0]=atoi(value);
+                    //cout<<portsList[0];
+                    while(value!=NULL)
+                    {
+                        value = strtok(NULL,",");
+                        if(value!=NULL)
+                        {
+                            protocolList[i] = atoi(value);
+                            i++;
+                        }
+                    }
+                }else protocolList[0]=atoi(val);
+                
+            }con->populateProtocolNumberToScan(protocolList);
+        }
+        
         
 	}
     

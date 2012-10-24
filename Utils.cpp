@@ -233,3 +233,134 @@ vector<string> readIPFile(char *fileName)
     return ipaddStringList;
 }
 
+void writeToFile(char *fileName, char *ipAddress)
+{
+    ofstream file;
+    char* newLine="\r";
+    file.open (fileName,ofstream::out | ofstream::app);
+    file <<ipAddress<<"\n";
+    file.close();
+}
+
+void truncateFile(char* fileName)
+{
+	ofstream file;
+    file.open(fileName,fstream::out | fstream::trunc);
+	file.close();
+}
+
+
+void getAllIPAddressesInSubnet(char* networkAddress, char* mask)
+{
+	truncateFile(SUBNET_IP_FILE);
+	cout<<"NetworkAddress:"<<networkAddress<<endl<<"Mask:"<<mask;
+	char* octet1 = strtok((char *)networkAddress, ".");
+	cout<<"Octet1: "<<octet1<<endl;
+	char* octet2 = strtok((char *)NULL, ".");
+	cout<<"Octet2: "<<octet2<<endl;
+	char* octet3 = strtok((char *)NULL, ".");
+	cout<<"Octet3: "<<octet3<<endl;
+	char* octet4 = strtok((char *)NULL, ".");
+	cout<<"Octet4: "<<octet4<<endl;
+    
+	stringstream myString;
+    
+	int intMask=atoi(mask);
+	int bitsChangedinOct1,bitsChangedinOct2,bitsChangedinOct3,bitsChangedinOct4;
+	float totalBitsChangedFloat = 32 - intMask;
+	int totalBitsChanged = (int)totalBitsChangedFloat;
+    
+	cout<<"totalbitsChanged= "<<totalBitsChanged<<endl;
+	cout<<"division/8= "<<totalBitsChanged/8<<endl;
+	if((totalBitsChangedFloat/8)>3)
+	{
+		cout<<"totalBitsChanged > 24"<<endl;
+		if((totalBitsChanged % 8)==0)
+			bitsChangedinOct1 = 8;
+		else bitsChangedinOct1 = (totalBitsChanged % 8);
+		bitsChangedinOct2 = 8;
+		bitsChangedinOct3 = 8;
+		bitsChangedinOct4 = 8;
+	}else if((totalBitsChangedFloat/8)>2 && (totalBitsChangedFloat/8)<=3)
+	{
+		cout<<"totalBitsChanged > 16"<<endl;
+		bitsChangedinOct1 = 0;
+		if((totalBitsChanged % 8)==0)
+			bitsChangedinOct2 = 8;
+		else bitsChangedinOct2 = (totalBitsChanged % 8);
+		bitsChangedinOct3 = 8;
+		bitsChangedinOct4 = 8;
+	}else if((totalBitsChangedFloat/8)>1 && (totalBitsChanged/8)<=2)
+	{
+		cout<<"totalBitsChanged > 8"<<endl;
+		bitsChangedinOct1 = 0;
+		bitsChangedinOct2 = 0;
+		if((totalBitsChanged % 8)==0)
+			bitsChangedinOct3 = 8;
+		else bitsChangedinOct3 = (totalBitsChanged % 8);
+		bitsChangedinOct4 = 8;
+	}else if((totalBitsChangedFloat/8)>=0 && (totalBitsChangedFloat/8)<=1)
+	{
+		cout<<"totalBitsChanged > 0"<<endl;
+		bitsChangedinOct1 = 0;
+		bitsChangedinOct2 = 0;
+		bitsChangedinOct3 = 0;
+		if((totalBitsChanged % 8)==0)
+			bitsChangedinOct4 = 8;
+		else bitsChangedinOct4 = (totalBitsChanged % 8);
+	}
+    
+	int oct4,oct3,oct2,oct1;
+    
+	oct1 = atoi(octet1);
+	oct2 = atoi(octet2);
+	oct3 = atoi(octet3);
+	oct4 = atoi(octet4);
+    
+	for(int i=0;i<pow(2,bitsChangedinOct1);i++)
+	{
+		cout<<"Oct1:"<<oct1<<endl;
+		if(oct1>255)
+		{
+			oct1=atoi(octet1);
+			break;
+		}
+		for(int j=0;j<pow(2,bitsChangedinOct2);j++)
+		{
+			cout<<"Oct2:"<<oct2<<endl;
+			if(oct2>255)
+			{
+				oct2=atoi(octet2);
+				oct1 = oct1+1;
+				break;
+			}
+			for(int k=0;k<pow(2,bitsChangedinOct3);k++)
+			{
+				cout<<"Oct3:"<<oct3<<endl;
+				if(oct3>255)
+				{
+					oct3=atoi(octet3);
+					oct2 = oct2+1;
+					break;
+				}
+                
+				for(int l=0;l<pow(2,bitsChangedinOct4);l++)
+				{
+					char addr[50];
+					sprintf(addr,"%d.%d.%d.%d",oct1,oct2,oct3,oct4);
+					writeToFile(SUBNET_IP_FILE,addr);
+					oct4 = oct4+1;
+					if(oct4>255)
+					{
+						oct4=atoi(octet4);
+						oct3 = oct3+1;
+						break;
+					}
+                    
+				}
+			}
+		}
+        
+	}
+    
+}
