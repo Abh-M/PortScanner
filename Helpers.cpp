@@ -8,7 +8,6 @@
 
 #include <stdio.h>
 #include "Helpers.h"
-#include "Globals.h"
 
 using namespace std;
 
@@ -120,9 +119,42 @@ void logICMPHeader(struct icmp *header)
 
 
 
-void getMyIpAddress()
+devAndIp getMyIpAddress()
 {
-
+    devAndIp result;
+    
+    char ipaddr[15];
+    
+    const char *dummyDest = "74.125.225.209";
+    const char *localHostIp = "127.0.0.1";
+    int dummySocket;
+    struct  sockaddr_in desAdd;
+    struct sockaddr_in srcAdd;
+    desAdd.sin_family = AF_INET;
+    desAdd.sin_port = htons(80);
+    inet_aton(dummyDest, &desAdd.sin_addr);
+    
+    dummySocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    
+    if(dummySocket>-1)
+    {
+        //socket created
+        socklen_t socklen = sizeof(desAdd);
+        int res = connect(dummySocket, (struct sockaddr*)&desAdd, socklen);
+        if(res==0)
+        {
+            //connected
+            socklen_t srcLen = sizeof(srcAdd);
+            int result = getsockname(dummySocket, (struct sockaddr*)&srcAdd, &srcLen);
+            if(result==0)
+                strcpy(ipaddr, inet_ntoa(srcAdd.sin_addr));
+            
+        }
+        close(dummySocket);
+        
+    }
+    
+    
     struct ifaddrs *adrs;
     int res =getifaddrs(&adrs);
     if(res==0)
@@ -131,15 +163,24 @@ void getMyIpAddress()
             adrs=adrs->ifa_next;
             
             if(adrs==NULL)
-                return;
+                break;
             else
             {
                 struct sockaddr_in *so = (struct sockaddr_in*)adrs->ifa_addr;
-                struct sockaddr_in *da = (struct sockaddr_in*)adrs->ifa_dstaddr;
-                struct sockaddr_in *ba = (struct sockaddr_in*)adrs->ifa_netmask;
-
-                if(da && so && ba && adrs->ifa_flags)
-                    cout<<"\n--"<<adrs->ifa_name<<"--"<<inet_ntoa(so->sin_addr)<<"--"<<inet_ntoa(da->sin_addr)<<"--"<<inet_ntoa(ba->sin_addr)<<"--"<<adrs->ifa_flags;
+                const char* ipp = inet_ntoa(so->sin_addr);
+                int cmpres =strcmp(ipaddr,ipp);
+                if(cmpres==0)
+                {
+                    strcpy(result.dev, adrs->ifa_name);
+                    strcpy(result.ip, ipaddr);
+                    //cout<<"\n--"<<adrs->ifa_name<<"--"<<inet_ntoa(so->sin_addr);
+                }
+                cmpres = strcmp(localHostIp, ipp);
+                if(cmpres==0)
+                {
+                    strcpy(result.localhost_dev, adrs->ifa_name);
+                    strcpy(result.localHost_ip, localHostIp);
+                }
             }
         }
     }
@@ -147,6 +188,10 @@ void getMyIpAddress()
     {
         //failure
     }
+    
+    
+    
+    return result;
 }
 
 

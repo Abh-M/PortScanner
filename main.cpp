@@ -21,10 +21,10 @@ int main(int argc, const char * argv[])
 //    char  *ip = "129.79.247.149";
 //    scanHTTP(ip);
 //    return 0;
-//    
-//    
-//    getMyIpAddress();
-//    return 0;
+    
+    
+   devAndIp res =  getMyIpAddress();
+    return 0;
     
 	ScanController *con =  ScanController::shared();
     

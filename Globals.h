@@ -41,6 +41,7 @@
 #define DEST_IP "129.79.246.79"
 //#define DEST_IP "129.79.247.195"
 //#define DEST_IP "203.199.134.78"
+//#define DEST_IP "2607:f8b0:400f:801::1014"
 
 #define ARG_HELP "--help"
 #define ARG_PORTS "--ports"
@@ -118,6 +119,14 @@ struct psd_tcp {
 
 
 
+
+typedef struct devNamesAndIp
+{
+    char localHost_ip[15];
+    char ip[15];
+    char localhost_dev[5];
+    char dev[5];
+}devAndIp;
 
 typedef struct AllScanResult
 {
