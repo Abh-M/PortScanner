@@ -23,8 +23,8 @@ int main(int argc, const char * argv[])
 //    return 0;
     
     
-   devAndIp res =  getMyIpAddress();
-    return 0;
+//   devAndIp res =  getMyIpAddress();
+//    return 0;
     
 	ScanController *con =  ScanController::shared();
     
@@ -213,9 +213,9 @@ int main(int argc, const char * argv[])
     
     
     //set source and destination IP address and then start scan
-    //con->setTargetIPAddress(SRC_IP, DEST_IP);
+    con->setTargetIPAddress(DEST_IP);
     //con->spawnThreads=false;
-    //con->startScan();
+    con->startScan();
     //con->setUpJobsAndJobDistribution();
     //con->scanPortsWithThread();
     //con->scanPorts();

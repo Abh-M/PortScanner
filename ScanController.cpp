@@ -74,9 +74,7 @@ ScanController::ScanController() {
     
     //by default scan loccalhost
     this->targetIP = new char[15]();
-    //    strcpy(this->targetIP,DEST_IP);
     this->sourceIP = new char[15]();
-    //    strcpy(this->sourceIP,SRC_IP);
     
     
     //ignore this
@@ -84,7 +82,16 @@ ScanController::ScanController() {
     
     //by default no thread spawning
     this->spawnThreads = false;
+    
+    
     this->fileName = false;
+    
+    
+    //get host ip address and dev string for localhost and other interface
+    
+    hostDevAndIp = getMyIpAddress();
+
+    setTargetIPAddress(hostDevAndIp.localHost_ip);
     populatePortsList();
     
 }
@@ -111,12 +118,44 @@ void ScanController::printScanTypeConf()
     }
 }
 
-void ScanController::setTargetIPAddress(char *kSourceIp,char *kTargetIp)
+
+void ScanController::setSrcAndDesAndDevString(bool islocalhost, char *kDestIp)
 {
-    this->sourceIP = kSourceIp;
-    this->targetIP = kTargetIp;
+        if(islocalhost)
+        {
+            this->devString = hostDevAndIp.localhost_dev;
+            this->sourceIP = hostDevAndIp.localHost_ip;
+            this->targetIP = hostDevAndIp.localHost_ip;
+        }
+        else if(!islocalhost && kDestIp!=NULL)
+        {
+            this->devString = hostDevAndIp.dev;
+            this->sourceIP = hostDevAndIp.ip;
+            this->targetIP = kDestIp;
+            
+        }
+        else
+        {
+            cout<<"\n Invalid Ip addresses";
+        }
     
 }
+
+void ScanController::setTargetIPAddress(char *kTargetIp)
+{
+    if(strcmp(kTargetIp, hostDevAndIp.localHost_ip)==0)
+    {
+        //if localhost
+        setSrcAndDesAndDevString(true, NULL);
+
+    }
+    else
+    {
+        setSrcAndDesAndDevString(false, kTargetIp);
+        
+    }
+}
+
 
 void ScanController::populatePortsList(int kStart, int kEnd)
 {
@@ -189,13 +228,14 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
-    if(LOCALHST == 0)
-        dev = pcap_lookupdev(errBuff);
-    else if(LOCALHST == 1 && APPLE ==1)
-        dev = "lo0";
-    else if(LOCALHST == 1 && APPLE ==0)
-        dev = "lo";
-    //#endif
+    dev=this->devString;
+//    if(LOCALHST == 0)
+//        dev = pcap_lookupdev(errBuff);
+//    else if(LOCALHST == 1 && APPLE ==1)
+//        dev = "lo0";
+//    else if(LOCALHST == 1 && APPLE ==0)
+//        dev = "lo";
+//    //#endif
     cout<<dev;
     
     
@@ -250,8 +290,8 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     //
     ip.ip_sum = 0x0;
     //IMP
-    ip.ip_src.s_addr = inet_addr(SRC_IP);
-    ip.ip_dst.s_addr =  inet_addr(DEST_IP);
+    ip.ip_src.s_addr = inet_addr(this->sourceIP);
+    ip.ip_dst.s_addr =  inet_addr(this->targetIP);
     ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
     //IMP
     memcpy(packet, &ip, sizeof(ip));
@@ -336,7 +376,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         cout<<inet_ntoa(iph->ip_src)<<endl;
         cout<<inet_ntoa(iph->ip_dst)<<endl;
         unsigned int proto = (unsigned)iph->ip_p;
-        if((strcmp(inet_ntoa(iph->ip_src), DEST_IP))==0)
+        if((strcmp(inet_ntoa(iph->ip_src), this->targetIP))==0)
         {
             cout<<"-----------VALID----------"<<endl;
             
@@ -425,13 +465,14 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
-    if(LOCALHST == 0)
-        dev = pcap_lookupdev(errBuff);
-    else if(LOCALHST == 1 && APPLE ==1)
-        dev = "lo0";
-    else if(LOCALHST == 1 && APPLE ==0)
-        dev = "lo";
+//    if(LOCALHST == 0)
+//        dev = pcap_lookupdev(errBuff);
+//    else if(LOCALHST == 1 && APPLE ==1)
+//        dev = "lo0";
+//    else if(LOCALHST == 1 && APPLE ==0)
+//        dev = "lo";
     //#endif
+    dev = this->devString;
     cout<<dev;
     
     
@@ -442,7 +483,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     
     //set filter exp depending upon source port
     char filter_exp[] = "adkjdw";
-    sprintf(filter_exp,"icmp",SRC_IP);
+    sprintf(filter_exp,"icmp",this->sourceIP);
     cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -486,8 +527,8 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     //
     ip.ip_sum = 0x0;
     //IMP
-    ip.ip_src.s_addr = inet_addr(SRC_IP);
-    ip.ip_dst.s_addr =  inet_addr(DEST_IP);
+    ip.ip_src.s_addr = inet_addr(this->sourceIP);
+    ip.ip_dst.s_addr =  inet_addr(this->targetIP);
     ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
     //IMP
     memcpy(packet, &ip, sizeof(ip));
@@ -590,13 +631,15 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
-    if(LOCALHST == 0)
-        dev = pcap_lookupdev(errBuff);
-    else if(LOCALHST == 1 && APPLE ==1)
-        dev = "lo0";
-    else if(LOCALHST == 1 && APPLE ==0)
-        dev = "lo";
+//    if(LOCALHST == 0)
+//        dev = pcap_lookupdev(errBuff);
+//    else if(LOCALHST == 1 && APPLE ==1)
+//        dev = "lo0";
+//    else if(LOCALHST == 1 && APPLE ==0)
+//        dev = "lo";
     // cout<<dev;
+    
+    dev=this->devString;
     
     
     pcap_t *handle;

@@ -67,6 +67,9 @@ public:
     int totalWorkers;
     
     
+    devAndIp hostDevAndIp;
+    char *devString;
+    
     
 #pragma mark - methods
     
@@ -76,7 +79,6 @@ public:
 	static ScanController*  shared();
 	ScanResult       		runTCPscan(ScanRequest kRequest);
     ScanResult              runUDPScan(ScanRequest kRequest);
-	void       				setTargetIPAddress(char *kSourceIp,char *kTargetIp);
 	void                    scanPort();
     void                    scanPorts();
     void                    populateProtocolNumberToScan();
@@ -92,6 +94,9 @@ public:
     Job                     getNextJob(int kWorkerId);
     void                    scanPortsWithThread();
     void                    startScan();
+    void                    setTargetIPAddress(char *kTargetIp);
+    void                    setSrcAndDesAndDevString(bool islocalhost, char *kDestIp);
+
 };
 
 #endif /* SCANCONTROLLER_H_ */
