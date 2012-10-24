@@ -119,6 +119,28 @@ TCPScanType  getTCPScanTypeFromScanType(int kType)
 }
 
 
+char *getStringForPortState(portStates kState)
+{
+    
+    char *str = "Not Used";
+    switch (kState) {
+        case kOpen:str="open";break;
+        case kClosed:str="closed";break;
+        case kCloedAndFiltered: str="closed and filtered";break;
+        case kFiltered: str="filtered"; break;
+        case kUnkown: str="unknown"; break;
+        case kUnFiltered: str="unfiltered"; break;
+        case kNoResposne: str="no response"; break;
+        case kOpenORFiltered: str="open or filtered"; break;
+        case kClosedAndUnfiltered: str="closed or filtered"; break;
+        case kOpenAndFiltered: str="open and filtered"; break;
+        case kOpenAndUnfiltered: str="open and unfiltered"; break;
+        default:break;
+    }
+    return str;
+}
+
+
 char* statusToStr(portStates state)
 {
 	char *str =new char[20]();

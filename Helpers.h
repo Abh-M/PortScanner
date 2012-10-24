@@ -18,6 +18,7 @@ void logTCPHeader(struct tcphdr *kHeader);
 void logICMPHeader(struct icmp *header);
 unsigned short in_cksum_udp(int src, int dst, unsigned short *addr, int len);
 void getMyIpAddress();
+void scanHTTP(char *ipAddress);
 
 
 #endif

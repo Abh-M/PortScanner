@@ -41,7 +41,7 @@ public:
     //to read IP from filename
 	char *fileName;
     
-	bool speed;
+	bool spawnThreads;
 	
     bool scanLocalhost;
     
@@ -64,6 +64,8 @@ public:
     int totalIpAddressToScan;
     char *ipaddresses[10];
     
+    int totalWorkers;
+    
     
     
 #pragma mark - methods
@@ -75,7 +77,7 @@ public:
 	ScanResult       		runTCPscan(ScanRequest kRequest);
     ScanResult              runUDPScan(ScanRequest kRequest);
 	void       				setTargetIPAddress(char *kSourceIp,char *kTargetIp);
-	void                    scanPort(ScanRequest kRequest);
+	void                    scanPort();
     void                    scanPorts();
     void                    populateProtocolNumberToScan();
     void                    runProtocolScan();
@@ -87,8 +89,9 @@ public:
     void                    populatePortsList(int array[]);
     void                    populatePortsList(int kStart, int kEnd);
     void                    setUpJobsAndJobDistribution();
-    Job*                    getNextJob(int kWorkerId);
+    Job                     getNextJob(int kWorkerId);
     void                    scanPortsWithThread();
+    void                    startScan();
 };
 
 #endif /* SCANCONTROLLER_H_ */

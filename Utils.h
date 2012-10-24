@@ -16,6 +16,7 @@ int getPacketSizeForScanType(int scanType);
 TCPScanType  getTCPScanTypeFromScanType(int kType);
 void readHelpFile(char *fileName);
 vector<string> readIPFile(char *fileName);
+char *getStringForPortState(portStates kState);
 
 int scanStringToNumber(char* scanType);
 char *scanNumToString(int scanType);

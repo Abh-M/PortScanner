@@ -10,17 +10,6 @@
 
 #pragma mark - constants
 #define SETLOCAL 0
-/* COMMAND LINE ARGS
- *     --help <display invocation options>
-    --ports <ports to scan>
-    --ip <IP address to scan>
-    --prefix <IP prefix to scan>
-    --file <file name containing IP addresses to scan>
-    --speedup <parallel threads to use>
-    --scan <one or more scans>
-    --protocol-range <transport layer protocols to scan>
- *
- **/
 
 #define TCP_SOURCE_PORT 5678
 #define TCP_SRC_IP "127.0.0.1"
@@ -34,7 +23,7 @@
 
 //#define SRC_IP "127.0.0.1"
 #define SRC_IP "10.0.0.3"
-
+//#define SRC_IP "140.182.144.196"
 //#define SRC_IP "140.182.147.44"
 
 //#define DEST_IP "140.182.147.44"
@@ -103,9 +92,9 @@ typedef enum{
     kNoResposne,
 	kUnkown,
     kNotUsed,
-
-
-
+    
+    
+    
 }portStates;
 
 
@@ -128,7 +117,6 @@ struct psd_tcp {
 #pragma mark - structures
 
 
-//////////////////////////////////////////////////////////////////
 
 
 typedef struct AllScanResult
@@ -196,6 +184,7 @@ typedef enum
 {
     kProtocolScan,
     kPortScan,
+    kInvalidJob,
     
 }JobType;
 
@@ -220,14 +209,15 @@ typedef struct kWorker
 } Worker;
 
 
-//
+//-----------  variables for multi-threading---------------//
 #define MAX_WORKERS 5
+#define NO_WORKERS 0
 #define JOB_START_INDEX 0
 #define JOB_END_INDEX 1
 #define JOB_CURRENT_INDEX 2
 #define NO_JOB -99
 #define NOT_STARTED -1
-//
+//--------------------------------------------------------//
 
 
 

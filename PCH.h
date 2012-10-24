@@ -20,6 +20,10 @@
 #include <errno.h>
 #include <unistd.h>
 #include <vector>
+#include <ctime>
+#include <sys/types.h>
+#include <ifaddrs.h>
+
 
 
 #include <arpa/inet.h>

@@ -9,7 +9,7 @@
 #include "PCH.h"
 #include "ScanController.h"
 
-
+#include "Helpers.h"
 #include "Utils.h"
 
 using namespace std;
@@ -17,6 +17,14 @@ using namespace std;
 
 int main(int argc, const char * argv[])
 {
+    
+//    char  *ip = "129.79.247.149";
+//    scanHTTP(ip);
+//    return 0;
+//    
+//    
+//    getMyIpAddress();
+//    return 0;
     
 	ScanController *con =  ScanController::shared();
     
@@ -80,18 +88,13 @@ int main(int argc, const char * argv[])
 							i++;
 						}
 					}
-                    
-                    
-                    //
-                    
-                    //					for(int i=0;i<5;i++)
-                    //					{
-                    //						cout<<"port"<<i<<":"<<portsList[i]<<endl;
-                    //					}
-                    
-                    
                     con->populatePortsList(portsList);
 				}
+                else
+                {
+                    portsList[0]=atoi(val);
+                    con->populatePortsList(portsList);
+                }
 			}
             
             
@@ -112,8 +115,8 @@ int main(int argc, const char * argv[])
 		if((strcmp(param, ARG_SPEED))==0)
 		{
             //enable multithreading
-			con->speed = true;
-			cout<<"Speedup="<<con->speed;
+			con->spawnThreads = true;
+			cout<<"Speedup="<<con->spawnThreads;
 		}
 		if((strstr(param, ARG_SCAN))!=NULL)
 		{
@@ -145,6 +148,12 @@ int main(int argc, const char * argv[])
 								con->typeOfScans[scantype]=1;
 						}
 					}
+				}
+                else
+				{
+					scantype = scanStringToNumber(value);
+					if(scantype!=UNKNOWN_SCAN)
+						con->typeOfScans[scantype]=1;
 				}
 			}
 		}
@@ -201,28 +210,31 @@ int main(int argc, const char * argv[])
     
     
     
-
+    
+    
     //set source and destination IP address and then start scan
-    con->setTargetIPAddress(SRC_IP, DEST_IP);
-    con->setUpJobsAndJobDistribution();
-    con->scanPortsWithThread();
+    //con->setTargetIPAddress(SRC_IP, DEST_IP);
+    //con->spawnThreads=false;
+    //con->startScan();
+    //con->setUpJobsAndJobDistribution();
+    //con->scanPortsWithThread();
     //con->scanPorts();
     
-//    Job *j = con->getNextJob(0);
-//    j=con->getNextJob(1);
-//    j=con->getNextJob(2);
-//    j=con->getNextJob(3);
-//    j=con->getNextJob(4);
-//    j=con->getNextJob(1);
-//    j=con->getNextJob(1);
-//    j=con->getNextJob(0);
-//    j=con->getNextJob(3);
-//    j=con->getNextJob(3);
-//    j=con->getNextJob(2);
-//    j=con->getNextJob(1);
-//con->scanPorts();
-//    con->printScanTypeConf();
-//    con->scanPorts();
+    //    Job *j = con->getNextJob(0);
+    //    j=con->getNextJob(1);
+    //    j=con->getNextJob(2);
+    //    j=con->getNextJob(3);
+    //    j=con->getNextJob(4);
+    //    j=con->getNextJob(1);
+    //    j=con->getNextJob(1);
+    //    j=con->getNextJob(0);
+    //    j=con->getNextJob(3);
+    //    j=con->getNextJob(3);
+    //    j=con->getNextJob(2);
+    //    j=con->getNextJob(1);
+    //con->scanPorts();
+    //    con->printScanTypeConf();
+    //    con->scanPorts();
 	return 0;
 }
 
