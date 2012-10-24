@@ -30,7 +30,7 @@ using namespace std;
 
 
 
-Job allJobs[MAX_PORTS];
+Job allJobs[MAX_PORTS+MAX_PROTOCOL_NUMBERS];
 sem_t mutex_allJobs;
 int totalJobs=0;
 sem_t mutex_totalJobs;
@@ -45,8 +45,8 @@ pthread_mutex_t kMutex;
 pthread_mutex_t k_syn_mutex;
 pthread_mutex_t k_request_mutex;
 pthread_mutex_t k_nextJob_mutex;
-
 void submitJob(Job kJob);
+void printProtocolScanResult(ProtocolScanResult kResult);
 
 
 
@@ -90,9 +90,13 @@ ScanController::ScanController() {
     //get host ip address and dev string for localhost and other interface
     
     hostDevAndIp = getMyIpAddress();
-
     setTargetIPAddress(hostDevAndIp.localHost_ip);
     populatePortsList();
+    
+    
+    
+    //populate protocol numbers to scan by default
+    populateProtocolNumberToScan();
     
 }
 
@@ -121,23 +125,23 @@ void ScanController::printScanTypeConf()
 
 void ScanController::setSrcAndDesAndDevString(bool islocalhost, char *kDestIp)
 {
-        if(islocalhost)
-        {
-            this->devString = hostDevAndIp.localhost_dev;
-            this->sourceIP = hostDevAndIp.localHost_ip;
-            this->targetIP = hostDevAndIp.localHost_ip;
-        }
-        else if(!islocalhost && kDestIp!=NULL)
-        {
-            this->devString = hostDevAndIp.dev;
-            this->sourceIP = hostDevAndIp.ip;
-            this->targetIP = kDestIp;
-            
-        }
-        else
-        {
-            cout<<"\n Invalid Ip addresses";
-        }
+    if(islocalhost)
+    {
+        this->devString = hostDevAndIp.localhost_dev;
+        this->sourceIP = hostDevAndIp.localHost_ip;
+        this->targetIP = hostDevAndIp.localHost_ip;
+    }
+    else if(!islocalhost && kDestIp!=NULL)
+    {
+        this->devString = hostDevAndIp.dev;
+        this->sourceIP = hostDevAndIp.ip;
+        this->targetIP = kDestIp;
+        
+    }
+    else
+    {
+        cout<<"\n Invalid Ip addresses";
+    }
     
 }
 
@@ -147,7 +151,7 @@ void ScanController::setTargetIPAddress(char *kTargetIp)
     {
         //if localhost
         setSrcAndDesAndDevString(true, NULL);
-
+        
     }
     else
     {
@@ -208,9 +212,9 @@ void ScanController::flushPortsList()
 void ScanController::populatePortsList()
 {
     int index =0;
-    int port = this->startPort;
+    int port = 0;
     this->totalPortsToScan = 0;
-    for(port = this->startPort,index = 0;port<=this->endPort;port++)
+    for(port = 0,index = 0;port<=1024;port++)
     {
         this->portsToScan[index++]=port;
         this->totalPortsToScan++;
@@ -229,14 +233,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     char *dev, errBuff[50];
     dev=this->devString;
-//    if(LOCALHST == 0)
-//        dev = pcap_lookupdev(errBuff);
-//    else if(LOCALHST == 1 && APPLE ==1)
-//        dev = "lo0";
-//    else if(LOCALHST == 1 && APPLE ==0)
-//        dev = "lo";
-//    //#endif
-    cout<<dev;
+    //cout<<dev;
     
     
     pcap_t *handle;
@@ -248,7 +245,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     char filter_exp[100];
     
     sprintf(filter_exp,"icmp");
-    cout<<"\n FILTER EXP "<<filter_exp;
+    //cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
     bpf_u_int32 net;
@@ -290,8 +287,8 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     //
     ip.ip_sum = 0x0;
     //IMP
-    ip.ip_src.s_addr = inet_addr(this->sourceIP);
-    ip.ip_dst.s_addr =  inet_addr(this->targetIP);
+    ip.ip_src.s_addr = inet_addr(req.sourceIp);
+    ip.ip_dst.s_addr =  inet_addr(req.destIp);
     ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
     //IMP
     memcpy(packet, &ip, sizeof(ip));
@@ -310,14 +307,14 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         icmphd.icmp_cksum = 0;
         icmphd.icmp_cksum = in_cksum((unsigned short *)&icmphd, 8);
         memcpy(packet + 20, &icmphd, 8);
-        cout<<"SCANNIN XXXX ICMP"<<endl;
+        //cout<<"SCANNIN XXXX ICMP"<<endl;
     }
     else if(ip.ip_p == IPPROTO_TCP)
     {
-        cout<<"SCANNIN XXXX TCP"<<endl;
+        //cout<<"SCANNIN XXXX TCP"<<endl;
         struct tcphdr tcp;
-        tcp.th_sport = htons(SRC_PORT);
-        tcp.th_dport = htons(DEST_PORT);
+        tcp.th_sport = htons(req.srcPort);
+        tcp.th_dport = htons(80);
         tcp.th_seq = htonl(0x131123);
         tcp.th_off = sizeof(struct tcphdr) / 4;
         tcp.th_flags = TH_SYN;
@@ -331,8 +328,8 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     {
         struct udphdr udp;
         
-        cout<<"SCANNIN XXXX UDP"<<endl;
-        udp.uh_sport = htons(SRC_PORT);
+        //cout<<"SCANNIN XXXX UDP"<<endl;
+        udp.uh_sport = htons(req.srcPort);
         udp.uh_dport = htons(69);
         udp.uh_ulen = htons(8);
         udp.uh_sum = 0;
@@ -369,30 +366,41 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     {
         printf("\nJacked a packet with length of [%d]\n", header.caplen);
         struct ip *iph = (struct ip*)(recPakcet+14);
-        logIpHeader(iph);
         
         //char *srcip = inet_ntoa(iph->ip_src);
         //char *desip = inet_ntoa(iph->ip_dst);
-        cout<<inet_ntoa(iph->ip_src)<<endl;
-        cout<<inet_ntoa(iph->ip_dst)<<endl;
+        //cout<<inet_ntoa(iph->ip_src)<<endl;
+        //cout<<inet_ntoa(iph->ip_dst)<<endl;
         unsigned int proto = (unsigned)iph->ip_p;
-        if((strcmp(inet_ntoa(iph->ip_src), this->targetIP))==0)
+        if((strcmp(inet_ntoa(iph->ip_src), req.destIp))==0)
         {
-            cout<<"-----------VALID----------"<<endl;
+//            logIpHeader(iph);
+
             
             if(proto==IPPROTO_ICMP )
             {
-                struct icmp *icmpHdr = (struct icmp*)(packet + 14 + 20);
+                cout<<"\n Protocol Number "<<req.protocolNumber<<endl;
+                struct icmp *icmpHdr = (struct icmp*)(packet  + 20);
                 logICMPHeader(icmpHdr);
+//                struct ip *p =(struct ip*)(packet+14+20+8);
+//                logIpHeader(p);
+            }
+            else{
+                cout<<"\n response Protocol Number "<<proto;
+//                result.protocolSupported = true;
             }
             
         }
         else
-            cout<<"-----------INVALID----------"<<endl;
+        {
+            //invalid packet recieved
+            result.protocolSupported = false;
+        }
         
     }
-    else
+    else //no packet recieved
     {
+        result.protocolSupported = false;
     }
     
     
@@ -417,13 +425,26 @@ void ScanController::runProtocolScan()
 
 
 
+
+void ScanController::populateProtocolNumberToScan(int kProtocolNumbersList[MAX_PROTOCOL_NUMBERS])
+{
+    this->totalProtocolsToScan=0;
+    int index=0;
+    int protocolNumber;
+    while ((protocolNumber=kProtocolNumbersList[index])!=-1) {
+        this->protocolNumbersToScan[index]=protocolNumber;
+        index++;
+        this->totalProtocolsToScan++;
+    }
+}
+
 void ScanController::populateProtocolNumberToScan()
 {
-    this->totalPortsToScan = 0;
-    for(int i=6;i<7;i++)
-    {
+    
+    //by default scan protocol number from 0-255
+    this->totalProtocolsToScan = 0;
+    for(int i=0;i<256;i++)
         this->protocolNumbersToScan[this->totalProtocolsToScan++]=i;
-    }
 }
 void ScanController::startScan()
 {
@@ -465,12 +486,12 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
-//    if(LOCALHST == 0)
-//        dev = pcap_lookupdev(errBuff);
-//    else if(LOCALHST == 1 && APPLE ==1)
-//        dev = "lo0";
-//    else if(LOCALHST == 1 && APPLE ==0)
-//        dev = "lo";
+    //    if(LOCALHST == 0)
+    //        dev = pcap_lookupdev(errBuff);
+    //    else if(LOCALHST == 1 && APPLE ==1)
+    //        dev = "lo0";
+    //    else if(LOCALHST == 1 && APPLE ==0)
+    //        dev = "lo";
     //#endif
     dev = this->devString;
     cout<<dev;
@@ -631,12 +652,12 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
-//    if(LOCALHST == 0)
-//        dev = pcap_lookupdev(errBuff);
-//    else if(LOCALHST == 1 && APPLE ==1)
-//        dev = "lo0";
-//    else if(LOCALHST == 1 && APPLE ==0)
-//        dev = "lo";
+    //    if(LOCALHST == 0)
+    //        dev = pcap_lookupdev(errBuff);
+    //    else if(LOCALHST == 1 && APPLE ==1)
+    //        dev = "lo0";
+    //    else if(LOCALHST == 1 && APPLE ==0)
+    //        dev = "lo";
     // cout<<dev;
     
     dev=this->devString;
@@ -934,8 +955,23 @@ void printScanResultForPort(AllScanResultForPort kResult)
     cout<<endl<<"-----------------------------------------"<<endl;
     
     
+    
 }
 
+
+void printProtocolScanResult(ProtocolScanResult kResult)
+{
+    cout<<endl<<"-----------------------------------------"<<endl;
+    cout<<"\nProtocol Number : "<<kResult.protocolNumber;
+
+    if(kResult.protocolSupported)
+        cout<<" : Protocol  Supported";
+    else
+        cout<<" : Protocol Not Supported";
+    cout<<endl<<"\n-----------------------------------------"<<endl;
+    
+    
+}
 
 
 void ScanController::scanPorts()
@@ -959,6 +995,7 @@ void ScanController::scanPorts()
             nextJob.result.finState = kNotUsed;
             nextJob.result.xmasState = kNotUsed;
             nextJob.result.nullState = kNotUsed;
+            
             
             //check which type of scans to be carried out
             
@@ -1013,87 +1050,18 @@ void ScanController::scanPorts()
         else if(nextJob.type == kProtocolScan)
         {
             
+            nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
+            ProtocolScanRequest protoScanReq;
+            protoScanReq.protocolNumber = nextJob.protocolNumber;
+            protoScanReq.srcPort = nextJob.srcPort;
+            protoScanReq.sourceIp = nextJob.srcIp;
+            protoScanReq.destIp = nextJob.desIp;
+            ProtocolScanResult protoScanResult = runScanForProtocol(protoScanReq);
+            nextJob.protocolScanResult = protoScanResult;
+            //            cout<<"\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<nextJob.protocolNumber;
+            //submitJob(nextJob);
         }
     }
-    
-    //    for (int index = 0 ;index < this->totalPortsToScan; index++)
-    //    {
-    //
-    //        ScanResult syn_result;
-    //        ScanResult ack_result;
-    //        ScanResult null_result;
-    //        ScanResult fin_result;
-    //        ScanResult xmas_result;
-    //        ScanResult udp_result;
-    //        AllScanResultForPort scanResults;
-    //        scanResults.synState = kNotUsed;
-    //        scanResults.ackState = kNotUsed;
-    //        scanResults.nullState = kNotUsed;
-    //        scanResults.finState = kNotUsed;
-    //        scanResults.xmasState = kNotUsed;
-    //        scanResults.udpState = kNotUsed;
-    //
-    //        int port = this->portsToScan[index];
-    //        //check which types of scan to be carried out
-    //
-    //        scanResults.portNo = port;
-    //
-    //        if(this->typeOfScans[SYN_SCAN]==1)
-    //        {
-    //            //construct scan request
-    //            cout<<"\n Scanning SYN "<<port<<endl;
-    //            ScanRequest synRequest = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, SYN_SCAN);
-    //            syn_result = runTCPscan(synRequest);
-    //            scanResults.synState = syn_result.tcp_portState;
-    //
-    //
-    //        }
-    //
-    //        if(this->typeOfScans[ACK_SCAN] == 1)
-    //        {
-    //            ScanRequest ackReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, ACK_SCAN);
-    //            ack_result = runTCPscan(ackReq);
-    //            scanResults.ackState = ack_result.tcp_portState;
-    //        }
-    //
-    //        if(this->typeOfScans[NULL_SCAN] == 1)
-    //        {
-    //            ScanRequest ackReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, NULL_SCAN);
-    //            null_result = runTCPscan(ackReq);
-    //            scanResults.ackState = null_result.tcp_portState;
-    //        }
-    //
-    //        if(this->typeOfScans[FIN_SCAN] == 1)
-    //        {
-    //
-    //            ScanRequest finReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, FIN_SCAN);
-    //            fin_result = runTCPscan(finReq);
-    //            scanResults.finState = fin_result.tcp_portState;
-    //        }
-    //
-    //        if (this->typeOfScans[XMAS_SCAN]==1) {
-    //            ScanRequest xmasReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, XMAS_SCAN);
-    //            xmas_result = runTCPscan(xmasReq);
-    //            scanResults.xmasState = fin_result.tcp_portState;
-    //        }
-    //
-    //        if(this->typeOfScans[UDP_SCAN]==1)
-    //        {
-    //            ScanRequest udpReq = createScanRequestFor(SRC_PORT, port, this->sourceIP, this->targetIP, UDP_SCAN);
-    //            udp_result = runUDPScan(udpReq);
-    //            scanResults.udpState = udp_result.udp_portState;
-    //
-    //        }
-    //
-    //
-    //
-    //
-    //        this->allPortsScanResult[this->allPortsScanResultIndex++] = scanResults;
-    //        printScanResultForPort(scanResults);
-    //
-    //
-    //    }
-    
     
 }
 
@@ -1115,8 +1083,8 @@ void ScanController::setUpJobsAndJobDistribution()
 {
     
     totalJobs = this->totalPortsToScan;
-    
-    for(int jobId=0;jobId<this->totalPortsToScan;jobId++)
+    int jobId = 0;
+    for(jobId = 0;jobId<this->totalPortsToScan;jobId++)
     {
         
         int destport = this->portsToScan[jobId];
@@ -1135,10 +1103,35 @@ void ScanController::setUpJobsAndJobDistribution()
         newJob.scanTypeToUse[XMAS_SCAN] = this->typeOfScans[XMAS_SCAN];
         newJob.scanTypeToUse[UDP_SCAN] = this->typeOfScans[UDP_SCAN];
         newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-        //        newJob.result
         
         allJobs[jobId]=newJob;
         
+    }
+    cout<<"\n>>>>>>>>>"<<jobId;
+    cout<<"\n-------->>>"<<this->totalProtocolsToScan;
+    totalJobs = totalJobs + this->totalProtocolsToScan;
+    for(int index = 0;index<this->totalProtocolsToScan;index++)
+    {
+        int protocolNumber = this->protocolNumbersToScan[index];
+        Job newJob;
+        newJob.jobId = jobId;
+        newJob.type = kProtocolScan;
+        newJob.srcPort = NOT_REQUIRED;
+        newJob.desPort = NOT_REQUIRED;
+        newJob.srcIp = this->sourceIP;
+        newJob.desIp = this->targetIP;
+        newJob.protocolNumber = protocolNumber;
+        
+        newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
+        newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
+        newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
+        newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
+        newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
+        newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
+        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
+        
+        allJobs[jobId]=newJob;
+        jobId++;
     }
     
     if(this->totalWorkers>NO_WORKERS)
@@ -1248,7 +1241,10 @@ void submitJob(Job kJob)
     pthread_mutex_lock(&kMutex);
     cout<<"\n Submitting Job"<<kJob.jobId;
     allJobs[kJob.jobId]=kJob;
-    printScanResultForPort(kJob.result);
+    if(kJob.type == kPortScan)
+        printScanResultForPort(kJob.result);
+    else if(kJob.type == kProtocolScan)
+        printProtocolScanResult(kJob.protocolScanResult);
     pthread_mutex_unlock(&kMutex);
     
     

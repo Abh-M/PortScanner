@@ -18,6 +18,9 @@
 #define DEST_PORT 2008
 
 
+#define PORT_NOT_REQUIRED -999
+#define NOT_REQUIRED -999
+
 #define LOCALHST 0
 #define APPLE 1
 
@@ -102,7 +105,7 @@ typedef enum{
 
 
 
-
+#define MAX_PROTOCOL_NUMBERS 255
 #define MAX_PORTS 65536
 #define MIN_PORTS 1
 
@@ -179,6 +182,9 @@ struct ScanRequest
 typedef struct ProtocolScanRequest
 {
     int protocolNumber;
+    char *sourceIp;
+    char *destIp;
+    int srcPort;
     
 }ProtocolScanRequest;
 
@@ -201,13 +207,24 @@ typedef enum
 typedef struct kJob
 {
     int jobId; //this is index to the Jobs list
+    
+    JobType type;
+
+
     int srcPort;
     int desPort;
+    
     char *srcIp;
     char *desIp;
-    JobType type;
+    
+
+    
     int scanTypeToUse[7];
     AllScanResultForPort result;
+    
+    int protocolNumber;
+    ProtocolScanResult protocolScanResult;
+    
 }Job;
 
 typedef struct kWorker

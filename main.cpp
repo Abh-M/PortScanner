@@ -50,7 +50,7 @@ int main(int argc, const char * argv[])
 		{
             flushArray(portsList, MAX_PORTS);
             con->flushPortsList();
-			char*ports= strtok((char *)param, valueSeperator);
+			char *ports= strtok((char *)param, valueSeperator);
 			while ((val = strtok(NULL, valueSeperator))!=NULL)
 			{
 				//seperate ports according to whether user has entered range or individual ports.

@@ -57,7 +57,7 @@ public:
     int allPortsScanResultIndex;
     
     
-    int protocolNumbersToScan[256];
+    int protocolNumbersToScan[MAX_PROTOCOL_NUMBERS];
     int totalProtocolsToScan;
     
     
@@ -77,26 +77,41 @@ public:
 	virtual   				 ~ScanController();
     
 	static ScanController*  shared();
-	ScanResult       		runTCPscan(ScanRequest kRequest);
-    ScanResult              runUDPScan(ScanRequest kRequest);
-	void                    scanPort();
-    void                    scanPorts();
-    void                    populateProtocolNumberToScan();
-    void                    runProtocolScan();
-    void                    populatePortsList();
-    ProtocolScanResult      runScanForProtocol(ProtocolScanRequest req);
-    void                    resetAllScanTypes();
-    void                    printScanTypeConf();
-    void                    flushPortsList();
-    void                    populatePortsList(int array[]);
-    void                    populatePortsList(int kStart, int kEnd);
-    void                    setUpJobsAndJobDistribution();
-    Job                     getNextJob(int kWorkerId);
-    void                    scanPortsWithThread();
-    void                    startScan();
+    
     void                    setTargetIPAddress(char *kTargetIp);
     void                    setSrcAndDesAndDevString(bool islocalhost, char *kDestIp);
+    void                    printScanTypeConf();
+    void                    resetAllScanTypes();
 
+
+
+    
+	ScanResult       		runTCPscan(ScanRequest kRequest);
+    ScanResult              runUDPScan(ScanRequest kRequest);
+  
+    void                    startScan();
+	void                    scanPort();
+    void                    scanPorts();
+    void                    scanPortsWithThread();
+    void                    runProtocolScan();
+    ProtocolScanResult      runScanForProtocol(ProtocolScanRequest req);
+
+
+
+    void                    flushPortsList();
+    void                    populateProtocolNumberToScan();
+    void                    populateProtocolNumberToScan(int kProtocolNumbersList[MAX_PROTOCOL_NUMBERS]);
+    void                    populatePortsList();
+    void                    populatePortsList(int array[]);
+    void                    populatePortsList(int kStart, int kEnd);
+
+
+    
+    
+    void                    setUpJobsAndJobDistribution();
+    Job                     getNextJob(int kWorkerId);
+    
+    
 };
 
 #endif /* SCANCONTROLLER_H_ */

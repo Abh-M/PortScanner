@@ -112,6 +112,7 @@ void logICMPHeader(struct icmp *header)
     cout<<"---------ICMP HEADER-----------"<<endl;
     cout<<"CODE :"<<(unsigned int)(header->icmp_code)<<endl;
     cout<<"TYPE :"<<(unsigned int)(header->icmp_type)<<endl;
+    cout<<"CSUM :"<<(unsigned int)(header->icmp_cksum)<<endl;
     cout<<"---------ICMP HEADER-----------"<<endl;
     
     
