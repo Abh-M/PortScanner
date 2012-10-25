@@ -706,7 +706,8 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
-    dev=this->devString;
+    //dev=this->devString;
+    dev="en0";
     
     
     pcap_t *handle;
@@ -752,30 +753,31 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     u_char *packet;
     packet = (u_char *)malloc(60);
     
-    if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
-        perror("raw socket");
-        exit(1);
-    }
-    ip.ip_hl = 0x5;
-    ip.ip_v = 0x4;
-    ip.ip_tos = 0x0;
-    ip.ip_len = sizeof(struct ip) + sizeof(struct tcphdr);
-    ip.ip_id = htons(ip_id);
-    ip.ip_off = 0x0;
-    ip.ip_ttl = 64;
-    ip.ip_p = IPPROTO_TCP;
-    ip.ip_sum = 0x0;
-    ip.ip_src.s_addr = inet_addr(kRequest.sourceIp);
-    ip.ip_dst.s_addr = inet_addr(kRequest.destIp);
-    ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
-    memcpy(packet, &ip, sizeof(ip));
+//    if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
+//        perror("raw socket");
+//        exit(1);
+//    }
+//    ip.ip_hl = 0x5;
+//    ip.ip_v = 0x4;
+//    ip.ip_tos = 0x0;
+//    ip.ip_len = sizeof(struct ip) + sizeof(struct tcphdr);
+//    ip.ip_id = htons(ip_id);
+//    ip.ip_off = 0x0;
+//    ip.ip_ttl = 64;
+//    ip.ip_p = IPPROTO_TCP;
+//    ip.ip_sum = 0x0;
+//    ip.ip_src.s_addr = inet_addr(kRequest.sourceIp);
+//    ip.ip_dst.s_addr = inet_addr(kRequest.destIp);
+//    ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
+//    memcpy(packet, &ip, sizeof(ip));
+//    
     
+    //create socket and set options
     tcp.th_sport = htons(kRequest.srcPort);
-    //Set dest port
     tcp.th_dport = htons(kRequest.destPort);
+
     tcp.th_seq = htonl(tcp_seq);
     tcp.th_off = sizeof(struct tcphdr) / 4;
-    //    tcp.th_flags = TH_SYN;
     
     //set flag depending upon type of scan
     switch (kRequest.scanType) {
@@ -802,42 +804,77 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     tcp.th_win = htons(32768);
     tcp.th_sum = 0;
-    tcp.th_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&tcp, sizeof(tcp));
-    memcpy((packet + sizeof(ip)), &tcp, sizeof(tcp));
+    //TODO: for ipv4
+//    tcp.th_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&tcp, sizeof(tcp));
+//    memcpy((packet + sizeof(ip)), &tcp, sizeof(tcp));
+    const char* src = "fe80::462a:60ff:fef3:c6ae";
+    //const char* des = "fe80::5054:ff:fefe:23e4";
+    const char* des = "::1";
+
+//    struct in6_addr srcAddr;
+//    struct in6_addr desAddr;
+    struct sockaddr_in6 srca; srca.sin6_family=AF_INET6; inet_pton(AF_INET6, src, &srca);
+    struct sockaddr_in6 desa; desa.sin6_family=AF_INET6; inet_pton(AF_INET6, des, &desa);
+
     
-    struct sockaddr_in sin;
-    memset(&sin, 0, sizeof(sin));
-    sin.sin_family = AF_INET;
-    sin.sin_addr.s_addr = ip.ip_dst.s_addr;
+    struct sockaddr_in addSrc; addSrc.sin_family = AF_INET6;inet_pton(AF_INET6, src, &addSrc);
+    struct sockaddr_in addDes; addDes.sin_family = AF_INET6; inet_pton(AF_INET6, des, &addDes);
+//    tcp.th_sum = in_cksum_tcp6((unsigned long)srca.sin6_addr, desa.sin6_addr, (unsigned short *)&tcp, sizeof(tcp));
+
+    memcpy(packet, &tcp, sizeof(tcp));
     
-    if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+    
+    //TODO: remove this for ipv4
+//    struct sockaddr_in sin;
+//    memset(&sin, 0, sizeof(sin));
+//    sin.sin_family = AF_INET;
+//    sin.sin_addr.s_addr = ip.ip_dst.s_addr;
+    
+
+    
+//    if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+//        perror("setsockopt");
+//        exit(1);
+//    }
+    
+//    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
+//        perror("sendto");
+//        exit(1);
+//    }
+    
+    
+    
+    sd = socket(AF_INET6, SOCK_RAW, IPPROTO_TCP);
+    int offset=16;
+    if (setsockopt(sd, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)) < 0) {
         perror("setsockopt");
         exit(1);
     }
-    
-    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
+
+    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&desa, sizeof(struct sockaddr)) < 0)  {
         perror("sendto");
         exit(1);
     }
+
     
     
     //wait for 5 sec for response
     //TODO: command line arg for timeout and set default value according to trial and error
-    time_t start, end;
-    double diff=0;
-    time(&start);
-    while (1) {
-        time(&end);
-        diff = difftime(end, start);
-        //cout<<"\n..."<<diff;
-        if(diff>=5.0)
-            break;
-    }
+//    time_t start, end;
+//    double diff=0;
+//    time(&start);
+//    while (1) {
+//        time(&end);
+//        diff = difftime(end, start);
+//        //cout<<"\n..."<<diff;
+//        if(diff>=5.0)
+//            break;
+//    }
     
     
     
     struct pcap_pkthdr header;
-    const u_char *recPakcet = pcap_next(handle, &header);
+    const u_char *recPakcet = NULL;// = pcap_next(handle, &header);
     if(recPakcet!=NULL)
     {
         struct ip *iph = (struct ip*)(recPakcet + 14);

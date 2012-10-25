@@ -240,14 +240,35 @@ int main(int argc, const char * argv[])
     
     //TODO: this thing works
     
+//    const char* src = "fe80::462a:60ff:fef3:c6ae";
+//    
+//    struct in6_addr srcAddr;
+//    struct sockaddr_in6 srca; srca.sin6_family=AF_INET6; inet_pton(AF_INET6, src, &srca);
+//    cout<<"\n....."<<sizeof(srca.sin6_addr);
+//    char iip[50];
+//    
+//    inet_ntop(AF_INET6, &srca.sin6_addr, iip, 50);
+//    cout<<"...."<<iip;
+
+//    cout<<"\n...in6_addr src and dest address : "<<sizeof(struct in6_addr);
+//        cout<<"\n...in_addr : "<<sizeof(struct in_addr);
+//    cout<<"\n...unsigned char : "<<sizeof(unsigned char);
+//    cout<<"\n...unsigned short : "<<sizeof(unsigned short);
+//    cout<<"\n...unsigned int --> tcp length   : "<<sizeof(u_int);
+//        cout<<"\n...unsigned int --> tcp length   : "<<sizeof(u_int);
+ //   cout<<"\n..."<<sizeof(struct pseudo_tcp6);
     
-    
-    con->populateIpAddressToScan(allIPaddress);
-    cout<<"\n Total Ip address"<<allIPaddress.size();
+    ScanRequest newReq;
+    newReq.srcPort = 5678;
+    newReq.destPort = 50000;
+    newReq.scanType = SYN_SCAN;
+    con->runTCPscan(newReq);
+    //con->populateIpAddressToScan(allIPaddress);
+    //cout<<"\n Total Ip address"<<allIPaddress.size();
     //set source and destination IP address and then start scan
     //con->setTargetIPAddress(DEST_IP);
-    con->spawnThreads=true;
-    con->startScan();
+    //con->spawnThreads=true;
+    //con->startScan();
     //con->setUpJobsAndJobDistribution();
     //con->scanPortsWithThread();
     //con->scanPorts();
