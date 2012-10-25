@@ -53,9 +53,10 @@
 #define ARG_SPEED "--speedup"
 #define ARG_SCAN "--scan"
 #define ARG_PROTO "--pr"
+#define ARG_IP "--ip"
 
 #define HELP_FILE "help.txt"
-#define SUBNET_IP_FILE "subnetips.txt"
+#define SUBNET_IP_FILE "/Users/abhineet/Github/demo/demo/subnetips.txt"
 
 #define INVALID_PORT -1
 #define INVALID_CODE -99
@@ -137,6 +138,7 @@ typedef struct AllScanResult
 {
     /* structure to store scan result of various types for a particular port*/
     int portNo;
+
     portStates synState;
     portStates ackState;
     portStates finState;

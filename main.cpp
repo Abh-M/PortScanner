@@ -18,12 +18,11 @@ using namespace std;
 int main(int argc, const char * argv[])
 {
     
-    
+    //create scan controller with default parameters
 	ScanController *con =  ScanController::shared();
     
 	const char *argSeperator = " ";
 	const char *valueSeperator = "=";
-    bool isIpProvided = false;
     vector<string> allIPaddress;
 	int portsList[MAX_PORTS];
 	for(int i=1;i<argc;i++)
@@ -38,11 +37,25 @@ int main(int argc, const char * argv[])
 			readHelpFile(HELP_FILE);
 			return 0;
 		}
+        if(strstr(param,ARG_IP)!=NULL)
+        {
+            char*ipParam = strtok((char *)param, valueSeperator);
+            strlen(ipParam);
+            char*ipAddress = strtok((char *)NULL, valueSeperator);
+            if(ipAddress!=NULL)
+            {
+//                vector<string> allIPaddress;
+                allIPaddress.push_back(ipAddress);
+                //cout<<"IP Address Entered: "<<ipAddress;
+                //Use ipaddress as required
+            }
+        }
 		if((strstr(param, ARG_PORTS))!=NULL)
 		{
             flushArray(portsList, MAX_PORTS);
             con->flushPortsList();
 			char *ports= strtok((char *)param, valueSeperator);
+            strlen(ports);
 			while ((val = strtok(NULL, valueSeperator))!=NULL)
 			{
 				//seperate ports according to whether user has entered range or individual ports.
@@ -108,15 +121,20 @@ int main(int argc, const char * argv[])
 				}
 				//cout<<"mask"<<mask<<endl;
 			}
-			getAllIPAddressesInSubnet(networkIP, mask);
+			int totalIps = getAllIPAddressesInSubnet(networkIP, mask);
+            allIPaddress =  readIPFile("/Users/abhineet/Github/demo/demo/subnetips.txt");
+            cout<<"\nTotal Ip in subnet"<<allIPaddress.size();
+            
             
             
 		}
 		if((strcmp(param, ARG_FILE))==0)
 		{
 			cout<<"Reading From File!"<<endl;
-			vector<string> allIPaddress =  readIPFile("/Users/abhineet/Github/demo/demo/IPAddressList.txt");
-            cout<<"Reading From Done!"<<allIPaddress[1];
+			 allIPaddress =  readIPFile("/Users/abhineet/Github/demo/demo/IPAddressList.txt");
+            cout<<"Reading From Done!"<<endl;//<<allIPaddress[1];
+            const char *ipp =allIPaddress[1].c_str();
+            cout<<"\n"<<ipp;
             
             
 		}
@@ -132,6 +150,7 @@ int main(int argc, const char * argv[])
             
             //seperate and organise list types of scans
 			char *scans= strtok((char *)param, valueSeperator);
+            strlen(scans);
 			while ((val = strtok(NULL, valueSeperator))!=NULL)
 			{
 				char *value;
@@ -212,25 +231,26 @@ int main(int argc, const char * argv[])
                     }
                 }else protocolList[0]=atoi(val);
                 
-            }con->populateProtocolNumberToScan(protocolList);
+            }//con->populateProtocolNumberToScan(protocolList);
         }
         
         
 	}
     
     
+    //TODO: this thing works
     
     
     
-    
+    con->populateIpAddressToScan(allIPaddress);
+    cout<<"\n Total Ip address"<<allIPaddress.size();
     //set source and destination IP address and then start scan
-    con->setTargetIPAddress(DEST_IP);
-    //con->spawnThreads=false;
+    //con->setTargetIPAddress(DEST_IP);
+    con->spawnThreads=true;
     con->startScan();
     //con->setUpJobsAndJobDistribution();
     //con->scanPortsWithThread();
     //con->scanPorts();
-    
     //    Job *j = con->getNextJob(0);
     //    j=con->getNextJob(1);
     //    j=con->getNextJob(2);

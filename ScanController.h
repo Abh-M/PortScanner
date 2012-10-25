@@ -11,18 +11,8 @@
 
 #include "PCH.h"
 #include "Globals.h"
-//struct scanResult
-//{
-//	int syn,rst,psh,ack,fin,urg;
-//	int scanType;
-//	int port;
-//};
-
 
 using namespace std;
-
-
-
 
 class ScanController {
 public:
@@ -61,14 +51,17 @@ public:
     int totalProtocolsToScan;
     
     
-    int totalIpAddressToScan;
-    char *ipaddresses[10];
     
     int totalWorkers;
     
     
     devAndIp hostDevAndIp;
     char *devString;
+    
+    
+    vector<string> allIpAddressToScan;
+    int totalIpAddressToScan;
+
     
     
 #pragma mark - methods
@@ -110,6 +103,10 @@ public:
     
     void                    setUpJobsAndJobDistribution();
     Job                     getNextJob(int kWorkerId);
+    
+    void                    populateIpAddressToScan(vector<string> kIpAddressList);
+    void                    populateIpAddressToScan();
+
     
     
 };

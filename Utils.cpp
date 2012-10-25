@@ -230,13 +230,14 @@ vector<string> readIPFile(char *fileName)
 			ipaddStringList.push_back(line);
 		}
 	}
+    //danger
+    ipaddStringList.pop_back();
     return ipaddStringList;
 }
 
 void writeToFile(char *fileName, char *ipAddress)
 {
     ofstream file;
-    char* newLine="\r";
     file.open (fileName,ofstream::out | ofstream::app);
     file <<ipAddress<<"\n";
     file.close();
@@ -250,8 +251,10 @@ void truncateFile(char* fileName)
 }
 
 
-void getAllIPAddressesInSubnet(char* networkAddress, char* mask)
+int getAllIPAddressesInSubnet(char* networkAddress, char* mask)
 {
+    
+    int totalIpAddressInSubnet = 0;
 	truncateFile(SUBNET_IP_FILE);
 	cout<<"NetworkAddress:"<<networkAddress<<endl<<"Mask:"<<mask;
 	char* octet1 = strtok((char *)networkAddress, ".");
@@ -348,7 +351,9 @@ void getAllIPAddressesInSubnet(char* networkAddress, char* mask)
 				{
 					char addr[50];
 					sprintf(addr,"%d.%d.%d.%d",oct1,oct2,oct3,oct4);
+                    //cout<<"\n--->"<<addr;
 					writeToFile(SUBNET_IP_FILE,addr);
+                    totalIpAddressInSubnet++;
 					oct4 = oct4+1;
 					if(oct4>255)
 					{
@@ -363,4 +368,5 @@ void getAllIPAddressesInSubnet(char* networkAddress, char* mask)
         
 	}
     
+    return totalIpAddressInSubnet;
 }

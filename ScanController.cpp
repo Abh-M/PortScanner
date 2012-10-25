@@ -1,8 +1,6 @@
 /*
  * ScanController.cpp
  *
- *  Created on: Oct 13, 2012
- *      Author: raj
  */
 
 #include "ScanController.h"
@@ -30,7 +28,7 @@ using namespace std;
 
 
 
-Job allJobs[MAX_PORTS+MAX_PROTOCOL_NUMBERS];
+Job allJobs[10*MAX_PORTS+10*MAX_PROTOCOL_NUMBERS];
 sem_t mutex_allJobs;
 int totalJobs=0;
 sem_t mutex_totalJobs;
@@ -90,7 +88,10 @@ ScanController::ScanController() {
     //get host ip address and dev string for localhost and other interface
     
     hostDevAndIp = getMyIpAddress();
-    setTargetIPAddress(hostDevAndIp.localHost_ip);
+    //setTargetIPAddress(hostDevAndIp.localHost_ip);
+    
+    populateIpAddressToScan();
+    
     populatePortsList();
     
     
@@ -114,6 +115,10 @@ void ScanController::resetAllScanTypes()
 }
 
 
+
+
+
+
 void ScanController::printScanTypeConf()
 {
     for (int i=0; i<7; i++) {
@@ -123,42 +128,42 @@ void ScanController::printScanTypeConf()
 }
 
 
-void ScanController::setSrcAndDesAndDevString(bool islocalhost, char *kDestIp)
-{
-    if(islocalhost)
-    {
-        this->devString = hostDevAndIp.localhost_dev;
-        this->sourceIP = hostDevAndIp.localHost_ip;
-        this->targetIP = hostDevAndIp.localHost_ip;
-    }
-    else if(!islocalhost && kDestIp!=NULL)
-    {
-        this->devString = hostDevAndIp.dev;
-        this->sourceIP = hostDevAndIp.ip;
-        this->targetIP = kDestIp;
-        
-    }
-    else
-    {
-        cout<<"\n Invalid Ip addresses";
-    }
-    
-}
+//void ScanController::setSrcAndDesAndDevString(bool islocalhost, char *kDestIp)
+//{
+//    if(islocalhost)
+//    {
+//        this->devString = hostDevAndIp.localhost_dev;
+//        this->sourceIP = hostDevAndIp.localHost_ip;
+//        this->targetIP = hostDevAndIp.localHost_ip;
+//    }
+//    else if(!islocalhost && kDestIp!=NULL)
+//    {
+//        this->devString = hostDevAndIp.dev;
+//        this->sourceIP = hostDevAndIp.ip;
+//        this->targetIP = kDestIp;
+//        
+//    }
+//    else
+//    {
+//        cout<<"\n Invalid Ip addresses";
+//    }
+//    
+//}
 
-void ScanController::setTargetIPAddress(char *kTargetIp)
-{
-    if(strcmp(kTargetIp, hostDevAndIp.localHost_ip)==0)
-    {
-        //if localhost
-        setSrcAndDesAndDevString(true, NULL);
-        
-    }
-    else
-    {
-        setSrcAndDesAndDevString(false, kTargetIp);
-        
-    }
-}
+//void ScanController::setTargetIPAddress(char *kTargetIp)
+//{
+//    if(strcmp(kTargetIp, hostDevAndIp.localHost_ip)==0)
+//    {
+//        //if localhost
+//        setSrcAndDesAndDevString(true, NULL);
+//        
+//    }
+//    else
+//    {
+//        setSrcAndDesAndDevString(false, kTargetIp);
+//        
+//    }
+//}
 
 
 void ScanController::populatePortsList(int kStart, int kEnd)
@@ -219,6 +224,50 @@ void ScanController::populatePortsList()
         this->portsToScan[index++]=port;
         this->totalPortsToScan++;
     }
+}
+
+void ScanController::populateIpAddressToScan()
+{
+    this->allIpAddressToScan.push_back(this->hostDevAndIp.localHost_ip);
+    this->devString = this->hostDevAndIp.localhost_dev;
+    this->totalIpAddressToScan = (int)this->allIpAddressToScan.size();
+    this->sourceIP = this->hostDevAndIp.localHost_ip;
+}
+
+
+
+void ScanController::populateIpAddressToScan(vector<string> kIpAddressList)
+{
+    
+    if(kIpAddressList.size()==1)
+    {
+        const char *singleIp = kIpAddressList[0].c_str();
+        if((strcmp(singleIp,this->hostDevAndIp.localHost_ip))==0)
+        {
+            //localhost
+            //do nothing
+            
+        }
+        else
+        {
+            this->totalIpAddressToScan =(int) kIpAddressList.size();
+            this->allIpAddressToScan=kIpAddressList;
+            this->devString = this->hostDevAndIp.dev;
+            this->sourceIP = this->hostDevAndIp.ip;
+
+            
+        }
+    }
+    else
+    {
+        this->totalIpAddressToScan =(int) kIpAddressList.size();
+        this->allIpAddressToScan=kIpAddressList;
+        this->devString = this->hostDevAndIp.dev;
+        this->sourceIP = this->hostDevAndIp.ip;
+
+        
+    }
+    
 }
 
 
@@ -420,7 +469,7 @@ void ScanController::runProtocolScan()
         cout<<"Scanning Protocol :"<<protocolNumnber<<endl;
         ProtocolScanRequest newReq;
         newReq.protocolNumber = protocolNumnber;
-        ProtocolScanResult res = runScanForProtocol(newReq);
+        /*ProtocolScanResult res = */runScanForProtocol(newReq);
     }
 }
 
@@ -446,7 +495,10 @@ void ScanController::populateProtocolNumberToScan()
     //by default scan protocol number from 0-255
     this->totalProtocolsToScan = 0;
     for(int i=0;i<256;i++)
-        this->protocolNumbersToScan[this->totalProtocolsToScan++]=i;
+    {
+        this->protocolNumbersToScan[i]=i+1;
+        this->totalProtocolsToScan++;
+    }
 }
 void ScanController::startScan()
 {
@@ -654,14 +706,6 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
-    //    if(LOCALHST == 0)
-    //        dev = pcap_lookupdev(errBuff);
-    //    else if(LOCALHST == 1 && APPLE ==1)
-    //        dev = "lo0";
-    //    else if(LOCALHST == 1 && APPLE ==0)
-    //        dev = "lo";
-    // cout<<dev;
-    
     dev=this->devString;
     
     
@@ -683,7 +727,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         net = 0;
         mask = 0;
     }
-    handle = pcap_open_live(dev, 65535, 0, 5000, errBuff);
+    handle = pcap_open_live(dev, 65535, 1, 3000, errBuff);
     if (handle == NULL) {
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
     }
@@ -777,17 +821,18 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     }
     
     
-    //wait for 1 sec for response
+    //wait for 5 sec for response
+    //TODO: command line arg for timeout and set default value according to trial and error
     time_t start, end;
-    double diff;
+    double diff=0;
     time(&start);
     while (1) {
         time(&end);
         diff = difftime(end, start);
-        if(diff>=2.00000)
+        //cout<<"\n..."<<diff;
+        if(diff>=5.0)
             break;
     }
-    
     
     
     
@@ -945,10 +990,10 @@ ScanRequest createScanRequestFor(int srcPort, int destPort, char *srcIp, char *d
 
 
 
-void printScanResultForPort(AllScanResultForPort kResult)
+void printScanResultForPort(AllScanResultForPort kResult, const char *ip)
 {
     cout<<endl<<"-----------------------------------------"<<endl;
-    cout<<"\nPORT : "<<kResult.portNo;
+    cout<<"\n IP : "<<ip<<" PORT : "<<kResult.portNo;
     cout<<"\nSYN  : "<<getStringForPortState(kResult.synState);
     cout<<"\nACK  : "<<getStringForPortState(kResult.ackState);
     cout<<"\nNULL : "<<getStringForPortState(kResult.nullState);
@@ -1053,16 +1098,16 @@ void ScanController::scanPorts()
         else if(nextJob.type == kProtocolScan)
         {
             
-//            nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
-//            ProtocolScanRequest protoScanReq;
-//            protoScanReq.protocolNumber = nextJob.protocolNumber;
-//            protoScanReq.srcPort = nextJob.srcPort;
-//            protoScanReq.sourceIp = nextJob.srcIp;
-//            protoScanReq.destIp = nextJob.desIp;
-//            ProtocolScanResult protoScanResult = runScanForProtocol(protoScanReq);
-//            nextJob.protocolScanResult = protoScanResult;
-//            //            cout<<"\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<nextJob.protocolNumber;
-//            //submitJob(nextJob);
+            nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
+            ProtocolScanRequest protoScanReq;
+            protoScanReq.protocolNumber = nextJob.protocolNumber;
+            protoScanReq.srcPort = nextJob.srcPort;
+            protoScanReq.sourceIp = nextJob.srcIp;
+            protoScanReq.destIp = nextJob.desIp;
+            ProtocolScanResult protoScanResult = runScanForProtocol(protoScanReq);
+            nextJob.protocolScanResult = protoScanResult;
+            //            cout<<"\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<nextJob.protocolNumber;
+            submitJob(nextJob);
         }
     }
     
@@ -1085,57 +1130,115 @@ ScanController* ScanController::shared()
 void ScanController::setUpJobsAndJobDistribution()
 {
     
-    totalJobs = this->totalPortsToScan;
+    totalJobs = 0;
     int jobId = 0;
-    for(jobId = 0;jobId<this->totalPortsToScan;jobId++)
-    {
+    for (int i=0; i<this->totalIpAddressToScan; i++) {
+       const char *nextIp = this->allIpAddressToScan[i].c_str();
         
-        int destport = this->portsToScan[jobId];
+        totalJobs = totalJobs+this->totalPortsToScan+this->totalProtocolsToScan;
+        for(int portIndex=0;portIndex<totalPortsToScan;portIndex++)
+        {
+            int destPort = this->portsToScan[portIndex];
+            Job newJob;
+            newJob.jobId = jobId;
+            newJob.type = kPortScan;
+            newJob.srcPort = SRC_PORT;
+            newJob.desPort = destPort;
+            newJob.srcIp = this->sourceIP;
+            newJob.desIp = (char*)nextIp;
+            newJob.scanTypeToUse[SYN_SCAN] = this->typeOfScans[SYN_SCAN];
+            newJob.scanTypeToUse[ACK_SCAN] = this->typeOfScans[ACK_SCAN];
+            newJob.scanTypeToUse[FIN_SCAN] = this->typeOfScans[FIN_SCAN];
+            newJob.scanTypeToUse[NULL_SCAN] = this->typeOfScans[NULL_SCAN];
+            newJob.scanTypeToUse[XMAS_SCAN] = this->typeOfScans[XMAS_SCAN];
+            newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[PROTO_SCAN] = NOT_REQUIRED;
+            allJobs[jobId]=newJob;
+            jobId++;
+
+            
+        }
         
-        Job newJob;
-        newJob.jobId = jobId;
-        newJob.type = kPortScan;
-        newJob.srcPort = SRC_PORT;
-        newJob.desPort = destport;
-        newJob.srcIp = this->sourceIP;
-        newJob.desIp = this->targetIP;
-        newJob.scanTypeToUse[SYN_SCAN] = this->typeOfScans[SYN_SCAN];
-        newJob.scanTypeToUse[ACK_SCAN] = this->typeOfScans[ACK_SCAN];
-        newJob.scanTypeToUse[FIN_SCAN] = this->typeOfScans[FIN_SCAN];
-        newJob.scanTypeToUse[NULL_SCAN] = this->typeOfScans[NULL_SCAN];
-        newJob.scanTypeToUse[XMAS_SCAN] = this->typeOfScans[XMAS_SCAN];
-        newJob.scanTypeToUse[UDP_SCAN] = this->typeOfScans[UDP_SCAN];
-        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-        
-        allJobs[jobId]=newJob;
+        for(int portNoIndex=0;portNoIndex<this->totalProtocolsToScan;portNoIndex++)
+        {
+            int proto = this->protocolNumbersToScan[portNoIndex];
+            Job newJob;
+            newJob.jobId =jobId;
+            newJob.type = kProtocolScan;
+            
+            newJob.srcIp = this->sourceIP;
+            newJob.desIp = (char*)nextIp;
+            
+            newJob.srcPort = NOT_REQUIRED;
+            newJob.desPort = NOT_REQUIRED;
+            
+            newJob.protocolNumber = proto;
+            newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
+            allJobs[jobId]=newJob;
+            jobId++;
+            
+        }
         
     }
-    cout<<"\n>>>>>>>>>"<<jobId;
-    cout<<"\n-------->>>"<<this->totalProtocolsToScan;
-    totalJobs = totalJobs + this->totalProtocolsToScan;
-    for(int index = 0;index<this->totalProtocolsToScan;index++)
-    {
-        int protocolNumber = this->protocolNumbersToScan[index];
-        Job newJob;
-        newJob.jobId = jobId;
-        newJob.type = kProtocolScan;
-        newJob.srcPort = NOT_REQUIRED;
-        newJob.desPort = NOT_REQUIRED;
-        newJob.srcIp = this->sourceIP;
-        newJob.desIp = this->targetIP;
-        newJob.protocolNumber = protocolNumber;
-        
-        newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
-        newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
-        newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
-        newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
-        newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
-        newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
-        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-        
-        allJobs[jobId]=newJob;
-        jobId++;
-    }
+    cout<<"\n Total Jobs"<<totalJobs;
+    
+//    totalJobs = this->totalPortsToScan;
+//    int jobId = 0;
+//    for(jobId = 0;jobId<this->totalPortsToScan;jobId++)
+//    {
+//        
+//        int destport = this->portsToScan[jobId];
+//        
+//        Job newJob;
+//        newJob.jobId = jobId;
+//        newJob.type = kPortScan;
+//        newJob.srcPort = SRC_PORT;
+//        newJob.desPort = destport;
+//        newJob.srcIp = this->sourceIP;
+//        newJob.desIp = this->targetIP;
+//        newJob.scanTypeToUse[SYN_SCAN] = this->typeOfScans[SYN_SCAN];
+//        newJob.scanTypeToUse[ACK_SCAN] = this->typeOfScans[ACK_SCAN];
+//        newJob.scanTypeToUse[FIN_SCAN] = this->typeOfScans[FIN_SCAN];
+//        newJob.scanTypeToUse[NULL_SCAN] = this->typeOfScans[NULL_SCAN];
+//        newJob.scanTypeToUse[XMAS_SCAN] = this->typeOfScans[XMAS_SCAN];
+//        newJob.scanTypeToUse[UDP_SCAN] = this->typeOfScans[UDP_SCAN];
+//        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
+//        
+//        allJobs[jobId]=newJob;
+//        
+//    }
+//    cout<<"\n>>>>>>>>>"<<jobId;
+//    cout<<"\n-------->>>"<<this->totalProtocolsToScan;
+//    totalJobs = totalJobs + this->totalProtocolsToScan;
+//    for(int index = 0;index<this->totalProtocolsToScan;index++)
+//    {
+//        int protocolNumber = this->protocolNumbersToScan[index];
+//        Job newJob;
+//        newJob.jobId = jobId;
+//        newJob.type = kProtocolScan;
+//        newJob.srcPort = NOT_REQUIRED;
+//        newJob.desPort = NOT_REQUIRED;
+//        newJob.srcIp = this->sourceIP;
+//        newJob.desIp = this->targetIP;
+//        newJob.protocolNumber = protocolNumber;
+//        
+//        newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
+//        newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
+//        newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
+//        newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
+//        newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
+//        newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
+//        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
+//        
+//        allJobs[jobId]=newJob;
+//        jobId++;
+//    }
     
     if(this->totalWorkers>NO_WORKERS)
     {
@@ -1245,7 +1348,7 @@ void submitJob(Job kJob)
     cout<<"\n Submitting Job"<<kJob.jobId;
     allJobs[kJob.jobId]=kJob;
     if(kJob.type == kPortScan)
-        printScanResultForPort(kJob.result);
+        printScanResultForPort(kJob.result,kJob.desIp);
     else if(kJob.type == kProtocolScan)
         printProtocolScanResult(kJob.protocolScanResult);
     pthread_mutex_unlock(&kMutex);
