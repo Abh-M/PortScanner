@@ -259,8 +259,8 @@ int main(int argc, const char * argv[])
  //   cout<<"\n..."<<sizeof(struct pseudo_tcp6);
     
     ScanRequest newReq;
-    newReq.srcPort = 5678;
-    newReq.destPort = 50000;
+    newReq.srcPort = 5679;
+    newReq.destPort = 80;
     newReq.scanType = SYN_SCAN;
     con->runTCPscan(newReq);
     //con->populateIpAddressToScan(allIPaddress);

@@ -707,7 +707,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     char *dev, errBuff[50];
     //dev=this->devString;
-    dev="en0";
+    dev="lo0";
     
     
     pcap_t *handle;
@@ -776,7 +776,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     tcp.th_sport = htons(kRequest.srcPort);
     tcp.th_dport = htons(kRequest.destPort);
 
-    tcp.th_seq = htonl(tcp_seq);
+    tcp.th_seq = htonl(1234);
     tcp.th_off = sizeof(struct tcphdr) / 4;
     
     //set flag depending upon type of scan
@@ -807,18 +807,23 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     //TODO: for ipv4
 //    tcp.th_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&tcp, sizeof(tcp));
 //    memcpy((packet + sizeof(ip)), &tcp, sizeof(tcp));
-    const char* src = "fe80::462a:60ff:fef3:c6ae";
-    //const char* des = "fe80::5054:ff:fefe:23e4";
-    const char* des = "::1";
+   // const char* src = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
+//    //const char* des = "fe80::5054:ff:fefe:23e4";
+    //const char* des = "2607:f8b0:400f:801::1013:";
+    //const char* src = "::1";
+    const char* des = "2a03:2880:10:6f01:face:b00c::5:";
+   // const char* des = "::1";
+
 
 //    struct in6_addr srcAddr;
 //    struct in6_addr desAddr;
-    struct sockaddr_in6 srca; srca.sin6_family=AF_INET6; inet_pton(AF_INET6, src, &srca);
-    struct sockaddr_in6 desa; desa.sin6_family=AF_INET6; inet_pton(AF_INET6, des, &desa);
-
+    //struct sockaddr_in6 srca; srca.sin6_family=AF_INET6; inet_pton(AF_INET6, src, &srca);
+    struct sockaddr_in6 desa; desa.sin6_family=AF_INET6; inet_pton(AF_INET6, des, &desa.sin6_addr);
+    //desa.sin6_port = htons(80);
+    //desa.sin6_port = htons(kRequest.destPort);
     
-    struct sockaddr_in addSrc; addSrc.sin_family = AF_INET6;inet_pton(AF_INET6, src, &addSrc);
-    struct sockaddr_in addDes; addDes.sin_family = AF_INET6; inet_pton(AF_INET6, des, &addDes);
+//    struct sockaddr_in addSrc; addSrc.sin_family = AF_INET6;inet_pton(AF_INET6, src, &addSrc);
+//    struct sockaddr_in addDes; addDes.sin_family = AF_INET6; inet_pton(AF_INET6, des, &addDes);
 //    tcp.th_sum = in_cksum_tcp6((unsigned long)srca.sin6_addr, desa.sin6_addr, (unsigned short *)&tcp, sizeof(tcp));
 
     memcpy(packet, &tcp, sizeof(tcp));
@@ -850,11 +855,28 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         perror("setsockopt");
         exit(1);
     }
+    
 
-    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&desa, sizeof(struct sockaddr)) < 0)  {
-        perror("sendto");
-        exit(1);
-    }
+    struct iovec iov;
+    struct  msghdr msg;
+    memset(&msg, 0, sizeof(struct msghdr));
+
+    iov.iov_base = packet;
+    iov.iov_len =60;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_name = &desa;
+    msg.msg_namelen = sizeof(desa);
+    msg.msg_control = NULL;
+    msg.msg_controllen=0;
+    size_t res=0;
+res  =  sendmsg(sd, &msg,0);
+    cout<<res;
+
+//    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&desa, sizeof(struct sockaddr)) < 0)  {
+//        perror("sendto");
+//        exit(1);
+//    }
 
     
     
@@ -874,7 +896,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     
     struct pcap_pkthdr header;
-    const u_char *recPakcet = NULL;// = pcap_next(handle, &header);
+    const u_char *recPakcet = pcap_next(handle, &header);
     if(recPakcet!=NULL)
     {
         struct ip *iph = (struct ip*)(recPakcet + 14);
