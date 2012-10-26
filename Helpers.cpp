@@ -75,14 +75,12 @@ unsigned short in_cksum_udp(int src, int dst, unsigned short *addr, int len)
 
 void logIpHeader(struct ip *kIpHdr)
 {
-    cout<<"---------IP HEADER-----------"<<endl;
-    cout<<"SRC  IP          : "<<inet_ntoa(kIpHdr->ip_src)<<endl;
-    cout<<"DEST IP          : "<<inet_ntoa(kIpHdr->ip_dst)<<endl;
-    cout<<"HEADER LENGTH    : "<<(kIpHdr->ip_hl)<<endl;
-    cout<<"TOTAL LENGTH     : "<<ntohs(kIpHdr->ip_len)<<endl;
-    cout<<"PROTOCOL         : "<<(unsigned int)kIpHdr->ip_p<<endl;
-    cout<<"---------IP HEADER-----------"<<endl;
     
+    cout<<"\nIP  "<<" | src: "<<inet_ntoa(kIpHdr->ip_src)
+    <<" | des: "<<inet_ntoa(kIpHdr->ip_dst)
+    <<" | total length: "<<ntohs(kIpHdr->ip_len)
+    <<" | protocol: "<<(unsigned int)kIpHdr->ip_p
+    <<" | header length : "<<(kIpHdr->ip_hl);
 }
 
 void logTCPHeader(struct tcphdr *kHeader){
@@ -114,10 +112,30 @@ void logICMPHeader(struct icmp *header)
     cout<<"TYPE :"<<(unsigned int)(header->icmp_type)<<endl;
     cout<<"CSUM :"<<(unsigned int)(header->icmp_cksum)<<endl;
     cout<<"---------ICMP HEADER-----------"<<endl;
-    
-    
 }
 
+void print_byte(uint8_t byte)
+{
+    uint8_t         i;
+    for (i = 0; i < 8; i++)
+        if (byte & (1 << i))
+            printf("1");
+        else
+            printf("0");
+}
+
+
+void logIP6Header(struct ip6_hdr *hdr)
+{
+    char src[INET6_ADDRSTRLEN];
+    char des[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, &(hdr->ip6_src), src, INET6_ADDRSTRLEN);
+    inet_ntop(AF_INET6, &(hdr->ip6_dst), des, INET6_ADDRSTRLEN);
+    cout<<"\nIPV6 "<<" | src = "<<src<<" | des = "<<des<<" | nxt = "<<(unsigned short)(hdr->ip6_ctlun.ip6_un1.ip6_un1_plen);
+//    print_byte((uint8_t)ntohs((hdr->ip6_vfc)));    //unsigned int x : 2;
+    
+
+}
 
 
 devAndIp getMyIpAddress()
@@ -193,6 +211,26 @@ devAndIp getMyIpAddress()
     
     
     return result;
+}
+
+
+
+bool isIpV6(const char *add)
+{
+    bool isIpv6;
+    struct sockaddr_in ipv4;
+    struct sockaddr_in6 ipv6;
+    
+    //check if ipv4
+    int ipv4res = inet_pton(AF_INET, add, &ipv4);
+    int ipv6res = inet_pton(AF_INET6, add, &ipv6);
+    
+    
+    isIpv6 = (ipv6res==1 && ipv4res == 0)?true:false;
+    
+    return isIpv6;
+
+
 }
 
 

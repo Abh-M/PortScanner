@@ -40,6 +40,7 @@
 #include <netinet/udp.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip_icmp.h>
+#include <netinet/ip6.h>
 
 
 

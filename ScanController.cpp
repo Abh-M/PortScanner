@@ -141,13 +141,13 @@ void ScanController::printScanTypeConf()
 //        this->devString = hostDevAndIp.dev;
 //        this->sourceIP = hostDevAndIp.ip;
 //        this->targetIP = kDestIp;
-//        
+//
 //    }
 //    else
 //    {
 //        cout<<"\n Invalid Ip addresses";
 //    }
-//    
+//
 //}
 
 //void ScanController::setTargetIPAddress(char *kTargetIp)
@@ -156,12 +156,12 @@ void ScanController::printScanTypeConf()
 //    {
 //        //if localhost
 //        setSrcAndDesAndDevString(true, NULL);
-//        
+//
 //    }
 //    else
 //    {
 //        setSrcAndDesAndDevString(false, kTargetIp);
-//        
+//
 //    }
 //}
 
@@ -254,7 +254,7 @@ void ScanController::populateIpAddressToScan(vector<string> kIpAddressList)
             this->allIpAddressToScan=kIpAddressList;
             this->devString = this->hostDevAndIp.dev;
             this->sourceIP = this->hostDevAndIp.ip;
-
+            
             
         }
     }
@@ -264,7 +264,7 @@ void ScanController::populateIpAddressToScan(vector<string> kIpAddressList)
         this->allIpAddressToScan=kIpAddressList;
         this->devString = this->hostDevAndIp.dev;
         this->sourceIP = this->hostDevAndIp.ip;
-
+        
         
     }
     
@@ -434,8 +434,8 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
                     result.icmp_code = (unsigned int)icmpHdr->icmp_code;
                     result.icmp_type = (unsigned int)icmpHdr->icmp_type;
                 }
-
-
+                
+                
             }
             else{
                 cout<<"\n Other Protocol Number "<<proto;
@@ -703,22 +703,19 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     status.tcp_portState = kUnkown;
     
     
+    bool isv6=isIpV6(kRequest.destIp);
+    
     //// Set pcap parameters
     
     char *dev, errBuff[50];
     //dev=this->devString;
-    dev="lo0";
+    dev="en0";
     
     
     pcap_t *handle;
-    
-    
     struct bpf_program fp;
-    
-    //set filter exp depending upon source port
     char filter_exp[] = "icmp || dst port ";
     sprintf(filter_exp,"icmp || dst port %d",5678);
-    // cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
     bpf_u_int32 net;
@@ -738,45 +735,23 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     if (pcap_setfilter(handle, &fp) == -1) {
         fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(handle));
     }
-    ////
-    
-    
-    
     
     struct ip ip;
     struct tcphdr tcp;
     const int on = 1;
     int tcp_seq = rand()%100+1;
     int ip_id = rand()%100+1;
-    // struct sockaddr_in sin;
     int sd;
     u_char *packet;
-    packet = (u_char *)malloc(60);
+    packet = (u_char *)malloc(20);
     
-//    if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
-//        perror("raw socket");
-//        exit(1);
-//    }
-//    ip.ip_hl = 0x5;
-//    ip.ip_v = 0x4;
-//    ip.ip_tos = 0x0;
-//    ip.ip_len = sizeof(struct ip) + sizeof(struct tcphdr);
-//    ip.ip_id = htons(ip_id);
-//    ip.ip_off = 0x0;
-//    ip.ip_ttl = 64;
-//    ip.ip_p = IPPROTO_TCP;
-//    ip.ip_sum = 0x0;
-//    ip.ip_src.s_addr = inet_addr(kRequest.sourceIp);
-//    ip.ip_dst.s_addr = inet_addr(kRequest.destIp);
-//    ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
-//    memcpy(packet, &ip, sizeof(ip));
-//    
     
+    //
     //create socket and set options
     tcp.th_sport = htons(kRequest.srcPort);
     tcp.th_dport = htons(kRequest.destPort);
-
-    tcp.th_seq = htonl(1234);
+    
+    tcp.th_seq = htonl(tcp_seq);
     tcp.th_off = sizeof(struct tcphdr) / 4;
     
     //set flag depending upon type of scan
@@ -800,98 +775,99 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         default:
             break;
     }
-    //
-    
     tcp.th_win = htons(32768);
     tcp.th_sum = 0;
-    //TODO: for ipv4
-//    tcp.th_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&tcp, sizeof(tcp));
-//    memcpy((packet + sizeof(ip)), &tcp, sizeof(tcp));
-   // const char* src = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
-//    //const char* des = "fe80::5054:ff:fefe:23e4";
-    //const char* des = "2607:f8b0:400f:801::1013:";
-    //const char* src = "::1";
-    const char* des = "2a03:2880:10:6f01:face:b00c::5:";
-   // const char* des = "::1";
-
-
-//    struct in6_addr srcAddr;
-//    struct in6_addr desAddr;
-    //struct sockaddr_in6 srca; srca.sin6_family=AF_INET6; inet_pton(AF_INET6, src, &srca);
-    struct sockaddr_in6 desa; desa.sin6_family=AF_INET6; inet_pton(AF_INET6, des, &desa.sin6_addr);
-    //desa.sin6_port = htons(80);
-    //desa.sin6_port = htons(kRequest.destPort);
     
-//    struct sockaddr_in addSrc; addSrc.sin_family = AF_INET6;inet_pton(AF_INET6, src, &addSrc);
-//    struct sockaddr_in addDes; addDes.sin_family = AF_INET6; inet_pton(AF_INET6, des, &addDes);
-//    tcp.th_sum = in_cksum_tcp6((unsigned long)srca.sin6_addr, desa.sin6_addr, (unsigned short *)&tcp, sizeof(tcp));
-
-    memcpy(packet, &tcp, sizeof(tcp));
-    
-    
-    //TODO: remove this for ipv4
-//    struct sockaddr_in sin;
-//    memset(&sin, 0, sizeof(sin));
-//    sin.sin_family = AF_INET;
-//    sin.sin_addr.s_addr = ip.ip_dst.s_addr;
-    
-
-    
-//    if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-//        perror("setsockopt");
-//        exit(1);
-//    }
-    
-//    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
-//        perror("sendto");
-//        exit(1);
-//    }
-    
-    
-    
-    sd = socket(AF_INET6, SOCK_RAW, IPPROTO_TCP);
-    int offset=16;
-    if (setsockopt(sd, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)) < 0) {
-        perror("setsockopt");
-        exit(1);
+    if(!isv6)
+    {
+        if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
+            perror("raw socket");
+            exit(1);
+        }
+        ip.ip_hl = 0x5;
+        ip.ip_v = 0x4;
+        ip.ip_tos = 0x0;
+        ip.ip_len = sizeof(struct ip) + sizeof(struct tcphdr);
+        ip.ip_id = htons(ip_id);
+        ip.ip_off = 0x0;
+        ip.ip_ttl = 64;
+        ip.ip_p = IPPROTO_TCP;
+        ip.ip_sum = 0x0;
+        ip.ip_src.s_addr = inet_addr(kRequest.sourceIp);
+        ip.ip_dst.s_addr = inet_addr(kRequest.destIp);
+        ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
+        memcpy(packet, &ip, sizeof(ip));
+        tcp.th_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&tcp, sizeof(tcp));
+        memcpy((packet + sizeof(ip)), &tcp, sizeof(tcp));
+        
+        
+        
+        struct sockaddr_in sin;
+        memset(&sin, 0, sizeof(sin));
+        sin.sin_family = AF_INET;
+        sin.sin_addr.s_addr = ip.ip_dst.s_addr;
+        
+        
+        
+        if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+            perror("setsockopt");
+            exit(1);
+        }
+        
+        if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
+            perror("sendto");
+            exit(1);
+        }
+        
+        
+    }
+    else if(isv6)
+    {
+        
+        const char* des =  kRequest.destIp;// "::1";
+        struct sockaddr_in6 desa; desa.sin6_family=AF_INET6; inet_pton(AF_INET6, des, &desa.sin6_addr);
+        
+        sd = socket(AF_INET6, SOCK_RAW, IPPROTO_TCP);
+        int offset=16;
+        if (setsockopt(sd, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)) < 0) {
+            perror("setsockopt");
+            exit(1);
+        }
+        
+        memcpy(packet, &tcp, sizeof(tcp));
+        
+        struct iovec iov;
+        struct  msghdr msg;
+        memset(&msg, 0, sizeof(struct msghdr));
+        
+        iov.iov_base = packet;
+        iov.iov_len =20;
+        msg.msg_iov = &iov;
+        msg.msg_iovlen = 1;
+        msg.msg_name = &desa;
+        msg.msg_namelen = sizeof(desa);
+        msg.msg_control = NULL;
+        msg.msg_controllen=0;
+        size_t res=0;
+        res  =  sendmsg(sd, &msg,0);
+        cout<<res;
+        
     }
     
-
-    struct iovec iov;
-    struct  msghdr msg;
-    memset(&msg, 0, sizeof(struct msghdr));
-
-    iov.iov_base = packet;
-    iov.iov_len =60;
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;
-    msg.msg_name = &desa;
-    msg.msg_namelen = sizeof(desa);
-    msg.msg_control = NULL;
-    msg.msg_controllen=0;
-    size_t res=0;
-res  =  sendmsg(sd, &msg,0);
-    cout<<res;
-
-//    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&desa, sizeof(struct sockaddr)) < 0)  {
-//        perror("sendto");
-//        exit(1);
-//    }
-
     
     
-    //wait for 5 sec for response
+    
     //TODO: command line arg for timeout and set default value according to trial and error
-//    time_t start, end;
-//    double diff=0;
-//    time(&start);
-//    while (1) {
-//        time(&end);
-//        diff = difftime(end, start);
-//        //cout<<"\n..."<<diff;
-//        if(diff>=5.0)
-//            break;
-//    }
+    //    time_t start, end;
+    //    double diff=0;
+    //    time(&start);
+    //    while (1) {
+    //        time(&end);
+    //        diff = difftime(end, start);
+    //        //cout<<"\n..."<<diff;
+    //        if(diff>=5.0)
+    //            break;
+    //    }
     
     
     
@@ -899,11 +875,27 @@ res  =  sendmsg(sd, &msg,0);
     const u_char *recPakcet = pcap_next(handle, &header);
     if(recPakcet!=NULL)
     {
-        struct ip *iph = (struct ip*)(recPakcet + 14);
-        //logIpHeader(iph);
         
-        //check is protocol is TCP
-        if((unsigned int)iph->ip_p == IPPROTO_TCP)
+        bool isTcp = false;
+        bool isIcmp = false;
+        
+        if(isv6)
+        {
+            struct ip6_hdr *v6hdr;
+            v6hdr = (struct ip6_hdr*)(recPakcet+14);
+            logIP6Header(v6hdr);
+        }
+        else{
+            //logIpHeader(iph);
+            
+            
+            struct ip *iph = (struct ip*)(recPakcet + 14);
+            isTcp = ((unsigned int)iph->ip_p == IPPROTO_TCP);
+            isIcmp = ((unsigned int)iph->ip_p == IPPROTO_ICMP);
+            logIpHeader(iph);
+            
+        }
+        if(isTcp)
         {
             struct tcphdr *tcpHdr = (struct tcphdr*)(recPakcet + 34);
             //check whether response is valid by comparing seq numbers and ack numbers
@@ -968,7 +960,8 @@ res  =  sendmsg(sd, &msg,0);
             
             
         }
-        else if((unsigned int)iph->ip_p == IPPROTO_ICMP)
+        //        else if((unsigned int)iph->ip_p == IPPROTO_ICMP)
+        else if(isIcmp)
         {
             //Handle ICMP packets
             
@@ -1051,17 +1044,12 @@ ScanRequest createScanRequestFor(int srcPort, int destPort, char *srcIp, char *d
 
 void printScanResultForPort(AllScanResultForPort kResult, const char *ip)
 {
-    cout<<endl<<"-----------------------------------------"<<endl;
-    cout<<"\n IP : "<<ip<<" PORT : "<<kResult.portNo;
-    cout<<"\nSYN  : "<<getStringForPortState(kResult.synState);
-    cout<<"\nACK  : "<<getStringForPortState(kResult.ackState);
-    cout<<"\nNULL : "<<getStringForPortState(kResult.nullState);
-    cout<<"\nFIN  : "<<getStringForPortState(kResult.finState);
-    cout<<"\nXMAS : "<<getStringForPortState(kResult.xmasState);
-    cout<<endl<<"-----------------------------------------"<<endl;
-    
-    
-    
+    cout<<"\n Scan Result IP : "<<ip<<" PORT : "<<kResult.portNo;
+    cout<<" |SYN  : "<<getStringForPortState(kResult.synState);
+    cout<<" |ACK  : "<<getStringForPortState(kResult.ackState);
+    cout<<" |NULL : "<<getStringForPortState(kResult.nullState);
+    cout<<" |FIN  : "<<getStringForPortState(kResult.finState);
+    cout<<" |XMAS : "<<getStringForPortState(kResult.xmasState);
 }
 
 
@@ -1192,7 +1180,7 @@ void ScanController::setUpJobsAndJobDistribution()
     totalJobs = 0;
     int jobId = 0;
     for (int i=0; i<this->totalIpAddressToScan; i++) {
-       const char *nextIp = this->allIpAddressToScan[i].c_str();
+        const char *nextIp = this->allIpAddressToScan[i].c_str();
         
         totalJobs = totalJobs+this->totalPortsToScan+this->totalProtocolsToScan;
         for(int portIndex=0;portIndex<totalPortsToScan;portIndex++)
@@ -1214,90 +1202,90 @@ void ScanController::setUpJobsAndJobDistribution()
             newJob.scanTypeToUse[PROTO_SCAN] = NOT_REQUIRED;
             allJobs[jobId]=newJob;
             jobId++;
-
+            
             
         }
         
-        for(int portNoIndex=0;portNoIndex<this->totalProtocolsToScan;portNoIndex++)
-        {
-            int proto = this->protocolNumbersToScan[portNoIndex];
-            Job newJob;
-            newJob.jobId =jobId;
-            newJob.type = kProtocolScan;
-            
-            newJob.srcIp = this->sourceIP;
-            newJob.desIp = (char*)nextIp;
-            
-            newJob.srcPort = NOT_REQUIRED;
-            newJob.desPort = NOT_REQUIRED;
-            
-            newJob.protocolNumber = proto;
-            newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
-            newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
-            newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
-            newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
-            newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
-            newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
-            newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-            allJobs[jobId]=newJob;
-            jobId++;
-            
-        }
+//        for(int portNoIndex=0;portNoIndex<this->totalProtocolsToScan;portNoIndex++)
+//        {
+//            int proto = this->protocolNumbersToScan[portNoIndex];
+//            Job newJob;
+//            newJob.jobId =jobId;
+//            newJob.type = kProtocolScan;
+//            
+//            newJob.srcIp = this->sourceIP;
+//            newJob.desIp = (char*)nextIp;
+//            
+//            newJob.srcPort = NOT_REQUIRED;
+//            newJob.desPort = NOT_REQUIRED;
+//            
+//            newJob.protocolNumber = proto;
+//            newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
+//            newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
+//            newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
+//            newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
+//            newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
+//            newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
+//            newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
+//            allJobs[jobId]=newJob;
+//            jobId++;
+//            
+//        }
         
     }
     cout<<"\n Total Jobs"<<totalJobs;
     
-//    totalJobs = this->totalPortsToScan;
-//    int jobId = 0;
-//    for(jobId = 0;jobId<this->totalPortsToScan;jobId++)
-//    {
-//        
-//        int destport = this->portsToScan[jobId];
-//        
-//        Job newJob;
-//        newJob.jobId = jobId;
-//        newJob.type = kPortScan;
-//        newJob.srcPort = SRC_PORT;
-//        newJob.desPort = destport;
-//        newJob.srcIp = this->sourceIP;
-//        newJob.desIp = this->targetIP;
-//        newJob.scanTypeToUse[SYN_SCAN] = this->typeOfScans[SYN_SCAN];
-//        newJob.scanTypeToUse[ACK_SCAN] = this->typeOfScans[ACK_SCAN];
-//        newJob.scanTypeToUse[FIN_SCAN] = this->typeOfScans[FIN_SCAN];
-//        newJob.scanTypeToUse[NULL_SCAN] = this->typeOfScans[NULL_SCAN];
-//        newJob.scanTypeToUse[XMAS_SCAN] = this->typeOfScans[XMAS_SCAN];
-//        newJob.scanTypeToUse[UDP_SCAN] = this->typeOfScans[UDP_SCAN];
-//        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-//        
-//        allJobs[jobId]=newJob;
-//        
-//    }
-//    cout<<"\n>>>>>>>>>"<<jobId;
-//    cout<<"\n-------->>>"<<this->totalProtocolsToScan;
-//    totalJobs = totalJobs + this->totalProtocolsToScan;
-//    for(int index = 0;index<this->totalProtocolsToScan;index++)
-//    {
-//        int protocolNumber = this->protocolNumbersToScan[index];
-//        Job newJob;
-//        newJob.jobId = jobId;
-//        newJob.type = kProtocolScan;
-//        newJob.srcPort = NOT_REQUIRED;
-//        newJob.desPort = NOT_REQUIRED;
-//        newJob.srcIp = this->sourceIP;
-//        newJob.desIp = this->targetIP;
-//        newJob.protocolNumber = protocolNumber;
-//        
-//        newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
-//        newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
-//        newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
-//        newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
-//        newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
-//        newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
-//        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-//        
-//        allJobs[jobId]=newJob;
-//        jobId++;
-//    }
+    //    totalJobs = this->totalPortsToScan;
+    //    int jobId = 0;
+    //    for(jobId = 0;jobId<this->totalPortsToScan;jobId++)
+    //    {
+    //
+    //        int destport = this->portsToScan[jobId];
+    //
+    //        Job newJob;
+    //        newJob.jobId = jobId;
+    //        newJob.type = kPortScan;
+    //        newJob.srcPort = SRC_PORT;
+    //        newJob.desPort = destport;
+    //        newJob.srcIp = this->sourceIP;
+    //        newJob.desIp = this->targetIP;
+    //        newJob.scanTypeToUse[SYN_SCAN] = this->typeOfScans[SYN_SCAN];
+    //        newJob.scanTypeToUse[ACK_SCAN] = this->typeOfScans[ACK_SCAN];
+    //        newJob.scanTypeToUse[FIN_SCAN] = this->typeOfScans[FIN_SCAN];
+    //        newJob.scanTypeToUse[NULL_SCAN] = this->typeOfScans[NULL_SCAN];
+    //        newJob.scanTypeToUse[XMAS_SCAN] = this->typeOfScans[XMAS_SCAN];
+    //        newJob.scanTypeToUse[UDP_SCAN] = this->typeOfScans[UDP_SCAN];
+    //        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
+    //
+    //        allJobs[jobId]=newJob;
+    //
+    //    }
+    //    cout<<"\n>>>>>>>>>"<<jobId;
+    //    cout<<"\n-------->>>"<<this->totalProtocolsToScan;
+    //    totalJobs = totalJobs + this->totalProtocolsToScan;
+    //    for(int index = 0;index<this->totalProtocolsToScan;index++)
+    //    {
+    //        int protocolNumber = this->protocolNumbersToScan[index];
+    //        Job newJob;
+    //        newJob.jobId = jobId;
+    //        newJob.type = kProtocolScan;
+    //        newJob.srcPort = NOT_REQUIRED;
+    //        newJob.desPort = NOT_REQUIRED;
+    //        newJob.srcIp = this->sourceIP;
+    //        newJob.desIp = this->targetIP;
+    //        newJob.protocolNumber = protocolNumber;
+    //
+    //        newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
+    //        newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
+    //        newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
+    //        newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
+    //        newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
+    //        newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
+    //        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
+    //
+    //        allJobs[jobId]=newJob;
+    //        jobId++;
+    //    }
     
     if(this->totalWorkers>NO_WORKERS)
     {
