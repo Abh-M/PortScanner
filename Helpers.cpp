@@ -136,7 +136,7 @@ void logIP6Header(struct ip6_hdr *hdr)
     char des[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6, &(hdr->ip6_src), src, INET6_ADDRSTRLEN);
     inet_ntop(AF_INET6, &(hdr->ip6_dst), des, INET6_ADDRSTRLEN);
-    cout<<"\nIPV6 "<<" | src = "<<src<<" | des = "<<des<<" | nxt = "<<(unsigned short)(hdr->ip6_ctlun.ip6_un1.ip6_un1_plen);
+    cout<<"\nIPV6 "<<" | src = "<<src<<" | des = "<<des<<" | payload = "<<(unsigned short)htons(hdr->ip6_ctlun.ip6_un1.ip6_un1_plen);
 //    print_byte((uint8_t)ntohs((hdr->ip6_vfc)));    //unsigned int x : 2;
     
 

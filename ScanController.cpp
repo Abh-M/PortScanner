@@ -543,7 +543,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     
     char *dev, errBuff[50];
     dev = this->devString;
-    dev = "en0";
+    dev = "lo0";
     cout<<dev;
     
     
@@ -555,7 +555,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     //set filter exp depending upon source port
     //TODO: dynamically generate pcap filter expressions
     char filter_exp[256];
-    sprintf(filter_exp,"icmp || dst host %s",kRequest.sourceIp);
+    sprintf(filter_exp,"icmp6 && ip6",kRequest.sourceIp);
     cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -688,34 +688,43 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
             //check for icmp or icmpv6 depending
             if(isv6){
                 //icmpv6
+                
+                struct ip6_hdr *ip6 = (struct ip6_hdr*)(recPakcet+14);
+                logIP6Header(ip6);
             }
             else
             {
                 //icmp
                 //FIX:remove hardcoding
                 struct ip *iph = (struct ip*)(recPakcet+14);
-                logIpHeader(iph);
-//                if((unsigned int)iph->ip_p == IPPROTO_ICMP)
-//                {
-//                    //FIX:remove hard-coded value
-//                    struct icmp *icmpHeader = (struct icmp*)(recPakcet + 14 + 20);
-//                    //check is valid icmp is present
-//                    //struct ip *inner_ip = (struct ip*)(recPakcet + 14 +8);
-//                    struct udphdr *inner_udp = (struct udphdr*)(packet + 14 + 20 + 8 + 20);//ether+ip+icmp+orignal ip
-//
-//                    if(kRequest.srcPort == ntohs(inner_udp->uh_dport)&&(kRequest.destPort)==ntohs(inner_udp->uh_sport))
-//                    {
-//                        logICMPHeader(icmpHeader);
-//                        logUDPHeader(inner_udp);
-//                        unsigned int code = (unsigned int)icmpHeader->icmp_code;
-//                        unsigned int type = (unsigned int)icmpHeader->icmp_type;
-//                        if(type==3 && (code==1 || code==2 || code==3 || code==9 || code ==10 || code==13))
-//                            status.udp_portState = kFiltered;
-//
-//                        
-//                    }
-//                    
-//                }
+                //cross check source and destination address
+                if( (strcmp(inet_ntoa(iph->ip_src), kRequest.destIp))==0 && (strcmp(inet_ntoa(iph->ip_dst), kRequest.sourceIp))==0)
+                {
+                    logIpHeader(iph);
+                    if((unsigned int)iph->ip_p == IPPROTO_ICMP)
+                    {
+                        //FIX:remove hard-coded value
+                        struct icmp *icmpHeader = (struct icmp*)(recPakcet + 14 + 20);
+                        //check is valid icmp is present
+                        //struct ip *inner_ip = (struct ip*)(recPakcet + 14 +8);
+                        struct udphdr *inner_udp = (struct udphdr*)(packet + 14 + 20 + 8 + 20);//ether+ip+icmp+orignal ip
+                        
+                        if(kRequest.srcPort == ntohs(inner_udp->uh_dport)&&(kRequest.destPort)==ntohs(inner_udp->uh_sport))
+                        {
+                            logICMPHeader(icmpHeader);
+                            logUDPHeader(inner_udp);
+                            unsigned int code = (unsigned int)icmpHeader->icmp_code;
+                            unsigned int type = (unsigned int)icmpHeader->icmp_type;
+                            if(type==3 && (code==1 || code==2 || code==3 || code==9 || code ==10 || code==13))
+                                status.udp_portState = kFiltered;
+                            
+                            
+                        }
+                        
+                    }
+
+                    
+                }
 
             }
             
