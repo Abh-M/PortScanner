@@ -543,7 +543,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     
     char *dev, errBuff[50];
     dev = this->devString;
-    dev = "en0";
+    dev = "lo0";
     cout<<dev;
     
     
@@ -555,7 +555,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     //set filter exp depending upon source port
     //TODO: dynamically generate pcap filter expressions
     char filter_exp[256];
-    sprintf(filter_exp,"icmp && dst host %s",kRequest.sourceIp);
+    sprintf(filter_exp,"(icmp && src host %s) || (icmp6 && src host %s)",kRequest.destIp,kRequest.destIp);
     cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -587,14 +587,13 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     u_char *packet;
     
     //depending on ip ver allocate bytes
-//    if(isv6)
-//        packet = (u_char *)malloc(sizeof(struct udphdr)); // as we do dont fill up ipv6 header
-//    else
+   if(isv6)
+        packet = (u_char *)malloc(sizeof(struct udphdr)); // as we do dont fill up ipv6 header
+    else
         packet = (u_char *)malloc(60);
-//        memset(&packet,'\0',60);
 
-    cout<<"\n....<<>>"<<sizeof(packet);
-    
+    int sz = sizeof(struct udphdr);
+    cout<<sz;
     
 
     
@@ -649,6 +648,15 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         const char* des =  kRequest.destIp;// "::1";
         struct sockaddr_in6 desa; desa.sin6_family=AF_INET6; inet_pton(AF_INET6, des, &desa.sin6_addr);
         
+        udp.uh_sport = htons(kRequest.srcPort);
+        udp.uh_dport = htons(kRequest.destPort);
+        udp.uh_ulen = htons(8);
+        udp.uh_sum = 0;
+        
+        
+        memcpy(packet, &udp, sizeof(udp));
+
+        
         sd = socket(AF_INET6, SOCK_RAW, IPPROTO_UDP);
         int offset=6;
         if (setsockopt(sd, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)) < 0) {
@@ -656,14 +664,13 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
             exit(1);
         }
         
-        memcpy(packet, &udp, sizeof(udp));
         
         struct iovec iov;
         struct  msghdr msg;
         memset(&msg, 0, sizeof(struct msghdr));
         
         iov.iov_base = packet;
-        iov.iov_len =sizeof(packet);
+        iov.iov_len =sizeof(struct udphdr);
         msg.msg_iov = &iov;
         msg.msg_iovlen = 1;
         msg.msg_name = &desa;
@@ -672,6 +679,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         msg.msg_controllen=0;
         size_t res=0;
         res  =  sendmsg(sd, &msg,0);
+        cout<<errno;
         cout<<"\n"<<res;
         
     }

@@ -29,6 +29,7 @@ void logICMPHeader(struct icmp *header);
 void logIP6Header(struct ip6_hdr *hdr);
 
 srcDesIpv4 getIpPairForIpHeader(struct ip *kIpHdr);
+void getAllIPV6AddressesInSubnet(char *address, char* maskv6);
 
 
 #endif
