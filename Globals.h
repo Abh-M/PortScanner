@@ -128,6 +128,14 @@ typedef struct
     char des[INET_ADDRSTRLEN];
 }srcDesIpv4;
 
+
+typedef struct
+{
+    char src[INET6_ADDRSTRLEN];
+    char des[INET6_ADDRSTRLEN];
+}srcDesIpv6;
+
+
 typedef struct devNamesAndIp
 {
     char localHost_ip[15];

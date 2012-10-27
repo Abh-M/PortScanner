@@ -118,6 +118,21 @@ srcDesIpv4 getIpPairForIpHeader(struct ip *kIpHdr)
     return ipPair;
 }
 
+srcDesIpv6 getIpPairForIp6Header(struct ip6_hdr *kIpHdr)
+{
+    
+    srcDesIpv6 ipPair;
+    char src[INET6_ADDRSTRLEN];
+    char des[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, &kIpHdr->ip6_src, src, INET6_ADDRSTRLEN);
+    inet_ntop(AF_INET6, &kIpHdr->ip6_dst, des, INET6_ADDRSTRLEN);
+    strcpy(ipPair.src, src);
+    strcpy(ipPair.des, des);
+    
+    return ipPair;
+}
+
+
 
 void logTCPHeader(struct tcphdr *kHeader){
     cout<<"---------TCP HEADER-----------"<<endl;
@@ -166,13 +181,20 @@ void print_byte(uint8_t byte)
 }
 
 
+void logICMP6Header(struct icmp6_hdr *khdr)
+{
+    cout<<"\nICMP6 |code :"<<(unsigned short)(khdr->icmp6_code)<<" |type: "<<(unsigned short)(khdr->icmp6_type);
+}
+
 void logIP6Header(struct ip6_hdr *hdr)
 {
     char src[INET6_ADDRSTRLEN];
     char des[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6, &(hdr->ip6_src), src, INET6_ADDRSTRLEN);
     inet_ntop(AF_INET6, &(hdr->ip6_dst), des, INET6_ADDRSTRLEN);
-    cout<<"\nIPV6 "<<" | src = "<<src<<" | des = "<<des<<" | payload = "<<(unsigned short)htons(hdr->ip6_ctlun.ip6_un1.ip6_un1_plen);
+    cout<<"\nIPV6 "<<" | src = "<<src<<" | des = "<<des<<" | payload = "<<(unsigned short)ntohs(hdr->ip6_ctlun.ip6_un1.ip6_un1_plen);
+    if(hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ICMPV6)
+        cout<<" | Protocol : ICMPV6";
 //    print_byte((uint8_t)ntohs((hdr->ip6_vfc)));    //unsigned int x : 2;
     
 

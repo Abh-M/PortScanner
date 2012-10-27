@@ -41,6 +41,7 @@
 #include <netinet/if_ether.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/ip6.h>
+#include <netinet/icmp6.h>
 
 
 
