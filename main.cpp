@@ -255,8 +255,8 @@ int main(int argc, const char * argv[])
     //2001:18e8:2:28a6:462a:60ff:fef3:c6ae
     ScanRequest udpScanReq;// = createScanRequestFor(5678, 53, con->hostDevAndIp.ip, "8.8.8.8",UDP_SCAN);
 //    udpScanReq.destIp = "8.8.8.8";
-        udpScanReq.destIp = "129.79.246.79";
-    udpScanReq.sourceIp = con->hostDevAndIp.ip;
+//        udpScanReq.destIp = "129.79.246.79";
+//    udpScanReq.sourceIp = con->hostDevAndIp.ip;
 //    udpScanReq.destIp = "2607:f8b0:400c:c01::69";
 //    udpScanReq.destIp = "2607:f8b0:400c:c01::68";
 //    udpScanReq.sourceIp = "fe80::462a:60ff:fef3:c6ae";
@@ -268,10 +268,25 @@ int main(int argc, const char * argv[])
     
         //udpScanReq.sourceIp = "140.182.146.113";
 
-
-    udpScanReq.srcPort = 5678;
-        udpScanReq.destPort = 45;
-    ScanResult udpScanResultForPort = con->runUDPScan(udpScanReq);
+//
+//    udpScanReq.srcPort = 5678;
+//        udpScanReq.destPort = 45;
+//    ScanResult udpScanResultForPort = con->runUDPScan(udpScanReq);
+    ProtocolScanRequest req;
+    req.srcPort = 5678;
+    req.desPort = 45;
+    req.sourceIp = con->hostDevAndIp.ip;
+        req.sourceIp = "127.0.0.1";
+//    req.destIp = "140.182.147.5";
+        req.destIp = "127.0.0.1";
+    for(int i=0;i<=255;i++)
+    {
+        cout<<"\n---------------------------\n";
+        req.protocolNumber = i;
+        con->runScanForProtocol(req);
+        cout<<"\n---------------------------\n";
+        
+    }
 
 
     

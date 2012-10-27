@@ -283,6 +283,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     char *dev, errBuff[50];
     dev=this->devString;
+    dev="lo0";
     //cout<<dev;
     
     
@@ -294,7 +295,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     //set filter exp depending upon source port
     char filter_exp[100];
     
-    sprintf(filter_exp,"icmp");
+    sprintf(filter_exp,"icmp && src host %s",req.destIp);
     //cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -345,9 +346,6 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     memcpy(packet, &ip, sizeof(ip));
     
     
-    //    //IMP
-    
-    
     if(ip.ip_p == IPPROTO_ICMP)
     {
         struct icmp icmphd;
@@ -355,38 +353,10 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         icmphd.icmp_code = 0;
         icmphd.icmp_id = 1000;
         icmphd.icmp_seq = 0;
-        icmphd.icmp_cksum = 0;
+        //icmphd.icmp_cksum = 0;
         icmphd.icmp_cksum = in_cksum((unsigned short *)&icmphd, 8);
         memcpy(packet + 20, &icmphd, 8);
         //cout<<"SCANNIN XXXX ICMP"<<endl;
-    }
-    else if(ip.ip_p == IPPROTO_TCP)
-    {
-        //cout<<"SCANNIN XXXX TCP"<<endl;
-        struct tcphdr tcp;
-        tcp.th_sport = htons(req.srcPort);
-        tcp.th_dport = htons(80);
-        tcp.th_seq = htonl(0x131123);
-        tcp.th_off = sizeof(struct tcphdr) / 4;
-        tcp.th_flags = TH_SYN;
-        tcp.th_win = htons(32768);
-        tcp.th_sum = 0;
-        tcp.th_sum = in_cksum_tcp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&tcp, sizeof(tcp));
-        memcpy((packet + sizeof(ip)), &tcp, sizeof(tcp));
-        
-    }
-    else if(ip.ip_p == IPPROTO_UDP)
-    {
-        struct udphdr udp;
-        
-        //cout<<"SCANNIN XXXX UDP"<<endl;
-        udp.uh_sport = htons(req.srcPort);
-        udp.uh_dport = htons(69);
-        udp.uh_ulen = htons(8);
-        udp.uh_sum = 0;
-        udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
-        memcpy(packet + 20, &udp, sizeof(udp));
-        
     }
     
     
@@ -412,21 +382,23 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     //RECV
     struct pcap_pkthdr header;
     const u_char *recPakcet =  pcap_next(handle, &header);
+    //recPakcet =  pcap_next(handle, &header);
     
     if(recPakcet!=NULL)
     {
         printf("\nJacked a packet with length of [%d]\n", header.caplen);
         struct ip *iph = (struct ip*)(recPakcet+14);
-        
+        logIpHeader(iph);
+
         unsigned int proto = (unsigned)iph->ip_p;
         if((strcmp(inet_ntoa(iph->ip_src), req.destIp))==0)
         {
             if(proto==IPPROTO_ICMP )
             {
-                cout<<"\n Protocol Number "<<req.protocolNumber<<endl;
+//                cout<<"\n Protocol Number "<<req.protocolNumber<<endl;
                 struct icmp *icmpHdr = (struct icmp*)(recPakcet  + 20 + 14);
                 struct ip *p =(struct ip*)(recPakcet+14+20+8);
-                cout<<"\n....."<<ntohs(p->ip_id)<<"----"<<ip_id;
+//                cout<<"\n....."<<ntohs(p->ip_id)<<"----"<<ip_id;
                 if(ntohs(p->ip_id)==ip_id)
                 {
                     logICMPHeader(icmpHdr);
