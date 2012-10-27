@@ -543,7 +543,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     
     char *dev, errBuff[50];
     dev = this->devString;
-    dev = "lo0";
+    dev = "en0";
     cout<<dev;
     
     
@@ -555,7 +555,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     //set filter exp depending upon source port
     //TODO: dynamically generate pcap filter expressions
     char filter_exp[256];
-    sprintf(filter_exp,"icmp6 && ip6",kRequest.sourceIp);
+    sprintf(filter_exp,"dst %s",kRequest.sourceIp);
     cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -587,20 +587,15 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     u_char *packet;
     
     //depending on ip ver allocate bytes
-    if(isv6)
-        packet = (u_char *)malloc(sizeof(struct udphdr)); // as we do dont fill up ipv6 header
-    else
+//    if(isv6)
+//        packet = (u_char *)malloc(sizeof(struct udphdr)); // as we do dont fill up ipv6 header
+//    else
         packet = (u_char *)malloc(60);
+    //memset(&packet,0,60);
 
     cout<<"\n....<<>>"<<sizeof(packet);
     
-    //ICMP
-    udp.uh_sport = htons(kRequest.srcPort);
-    udp.uh_dport = htons(kRequest.destPort);
-    udp.uh_ulen = htons(8);
-    udp.uh_sum = 0;
-    udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
-    memcpy(packet+kOffset, &udp, sizeof(udp));
+    
 
     
     if(!isv6)
@@ -612,16 +607,21 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         ip.ip_id = htons(12830);
         ip.ip_off = 0x0;
         ip.ip_ttl = 64;
-        //imp
         ip.ip_p = IPPROTO_UDP;
-        //
         ip.ip_sum = 0x0;
-        //IMP
         ip.ip_src.s_addr = inet_addr(kRequest.sourceIp);
         ip.ip_dst.s_addr =  inet_addr(kRequest.destIp);
         ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
-        //IMP
         memcpy(packet, &ip, sizeof(ip));
+        
+        udp.uh_sport = htons(kRequest.srcPort);
+        udp.uh_dport = htons(kRequest.destPort);
+        udp.uh_ulen = htons(8);
+        udp.uh_sum = 0;
+        udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
+        memcpy(packet + 20, &udp, sizeof(udp));
+
+
         
         if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
             perror("raw socket");
