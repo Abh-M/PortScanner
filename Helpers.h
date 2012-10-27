@@ -15,13 +15,18 @@
 
 unsigned short in_cksum(unsigned short *addr, int len);
 unsigned short in_cksum_tcp(int src, int dst, unsigned short *addr, int len);
+unsigned short in_cksum_udp(int src, int dst, unsigned short *addr, int len);
+
+devAndIp getMyIpAddress();
+bool isIpV6(const char *add);
+
+
+void logUDPHeader(struct udphdr *header);
 void logIpHeader(struct ip *kIpHdr);
 void logTCPHeader(struct tcphdr *kHeader);
 void logICMPHeader(struct icmp *header);
-unsigned short in_cksum_udp(int src, int dst, unsigned short *addr, int len);
-devAndIp getMyIpAddress();
-
 void logIP6Header(struct ip6_hdr *hdr);
-bool isIpV6(const char *add);
+
+
 
 #endif

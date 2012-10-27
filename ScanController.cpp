@@ -530,24 +530,20 @@ void ScanController::startScan()
 ScanResult ScanController::runUDPScan(ScanRequest kRequest)
 {
     ScanResult status;
-    status.srcPort = ntohs(kRequest.srcPort);
-    status.destPort = ntohs(kRequest.destPort);
-    status.srcIp = inet_ntoa(kRequest.src.sin_addr);
-    status.destIp = inet_ntoa(kRequest.dest.sin_addr);
+    status.srcPort = kRequest.srcPort;
+    status.destPort = kRequest.destPort;
+    status.srcIp = kRequest.sourceIp;
+    status.destIp = kRequest.destIp;
     status.udp_portState = kUnkown;
     
+    
+    bool isv6= isIpV6(kRequest.destIp);
     
     //// Set pcap parameters
     
     char *dev, errBuff[50];
-    //    if(LOCALHST == 0)
-    //        dev = pcap_lookupdev(errBuff);
-    //    else if(LOCALHST == 1 && APPLE ==1)
-    //        dev = "lo0";
-    //    else if(LOCALHST == 1 && APPLE ==0)
-    //        dev = "lo";
-    //#endif
     dev = this->devString;
+    dev = "en0";
     cout<<dev;
     
     
@@ -557,8 +553,9 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     struct bpf_program fp;
     
     //set filter exp depending upon source port
-    char filter_exp[] = "adkjdw";
-    sprintf(filter_exp,"icmp",this->sourceIP);
+    //TODO: dynamically generate pcap filter expressions
+    char filter_exp[256];
+    sprintf(filter_exp,"icmp || dst host %s",kRequest.sourceIp);
     cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -579,7 +576,8 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     if (pcap_setfilter(handle, &fp) == -1) {
         fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(handle));
     }
-    ////
+    
+    int kOffset = (isv6)?0:sizeof(struct ip);
     
     struct ip ip;
     struct udphdr udp;
@@ -588,81 +586,137 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     struct sockaddr_in sin;
     u_char *packet;
     
-    packet = (u_char *)malloc(60);
+    //depending on ip ver allocate bytes
+    if(isv6)
+        packet = (u_char *)malloc(sizeof(struct udphdr)); // as we do dont fill up ipv6 header
+    else
+        packet = (u_char *)malloc(60);
+
+    cout<<"\n....<<>>"<<sizeof(packet);
     
-    ip.ip_hl = 0x5;
-    ip.ip_v = 0x4;
-    ip.ip_tos = 0x0;
-    ip.ip_len = 60;
-    ip.ip_id = htons(12830);
-    ip.ip_off = 0x0;
-    ip.ip_ttl = 64;
-    //imp
-    ip.ip_p = IPPROTO_UDP;
-    //
-    ip.ip_sum = 0x0;
-    //IMP
-    ip.ip_src.s_addr = inet_addr(this->sourceIP);
-    ip.ip_dst.s_addr =  inet_addr(this->targetIP);
-    ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
-    //IMP
-    memcpy(packet, &ip, sizeof(ip));
-    
-    
-    //IMP
-    udp.uh_sport = htons(SRC_PORT);
+    //ICMP
+    udp.uh_sport = htons(kRequest.srcPort);
     udp.uh_dport = htons(kRequest.destPort);
     udp.uh_ulen = htons(8);
-    
     udp.uh_sum = 0;
     udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
-    memcpy(packet + 20, &udp, sizeof(udp));
+    memcpy(packet+kOffset, &udp, sizeof(udp));
+
     
-    if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-        perror("raw socket");
-        exit(1);
+    if(!isv6)
+    {
+        ip.ip_hl = 0x5;
+        ip.ip_v = 0x4;
+        ip.ip_tos = 0x0;
+        ip.ip_len = 60;
+        ip.ip_id = htons(12830);
+        ip.ip_off = 0x0;
+        ip.ip_ttl = 64;
+        //imp
+        ip.ip_p = IPPROTO_UDP;
+        //
+        ip.ip_sum = 0x0;
+        //IMP
+        ip.ip_src.s_addr = inet_addr(kRequest.sourceIp);
+        ip.ip_dst.s_addr =  inet_addr(kRequest.destIp);
+        ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
+        //IMP
+        memcpy(packet, &ip, sizeof(ip));
+        
+        if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+            perror("raw socket");
+            exit(1);
+        }
+        
+        if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+            perror("setsockopt");
+            exit(1);
+        }
+        memset(&sin, 0, sizeof(sin));
+        sin.sin_family = AF_INET;
+        sin.sin_addr.s_addr = ip.ip_dst.s_addr;
+        
+        if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
+            perror("sendto");
+            exit(1);
+        }
+
+
+        
     }
-    
-    if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-        perror("setsockopt");
-        exit(1);
+    else if(isv6)
+    {
+        const char* des =  kRequest.destIp;// "::1";
+        struct sockaddr_in6 desa; desa.sin6_family=AF_INET6; inet_pton(AF_INET6, des, &desa.sin6_addr);
+        
+        sd = socket(AF_INET6, SOCK_RAW, IPPROTO_UDP);
+        int offset=6;
+        if (setsockopt(sd, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)) < 0) {
+            perror("setsockopt");
+            exit(1);
+        }
+        
+        memcpy(packet, &udp, sizeof(udp));
+        
+        struct iovec iov;
+        struct  msghdr msg;
+        memset(&msg, 0, sizeof(struct msghdr));
+        
+        iov.iov_base = packet;
+        iov.iov_len =sizeof(packet);
+        msg.msg_iov = &iov;
+        msg.msg_iovlen = 1;
+        msg.msg_name = &desa;
+        msg.msg_namelen = sizeof(desa);
+        msg.msg_control = NULL;
+        msg.msg_controllen=0;
+        size_t res=0;
+        res  =  sendmsg(sd, &msg,0);
+        cout<<"\n"<<res;
+        
     }
-    memset(&sin, 0, sizeof(sin));
-    sin.sin_family = AF_INET;
-    sin.sin_addr.s_addr = ip.ip_dst.s_addr;
-    
-    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
-        perror("sendto");
-        exit(1);
-    }
-    //	if (sendto(sd, packet, 60, 0, (struct sockaddr *)&kRequest.dest, sizeof(struct sockaddr)) < 0)  {
-    //		perror("sendto");
-    //		exit(1);
-    //	}
-    
     
     //RECV
     struct pcap_pkthdr header;
-    const u_char *recPakcet ;//= pcap_next(handle, &header);
+    const u_char *recPakcet =  pcap_next(handle, &header);
     
-    while((recPakcet = pcap_next(handle, &header))!=NULL){
+
         if(recPakcet!=NULL)
         {
             cout<<"\nGOt UDP Packet response\n";
             printf("\nJacked a packet with length of [%d]\n", header.caplen);
-            struct ip *iph = (struct ip*)(recPakcet+14);
-            logIpHeader(iph);
-            if((unsigned int)iph->ip_p == IPPROTO_ICMP)
+            //check for icmp or icmpv6 depending
+            if(isv6){
+                //icmpv6
+            }
+            else
             {
-                struct icmp *icmpHeader = (struct icmp*)(recPakcet + 14 + 20);
-                logICMPHeader(icmpHeader);
-                //check is valid icmp is present
-                status.udp_portState=   kFiltered;
-                
-                unsigned int code = (unsigned int)icmpHeader->icmp_code;
-                unsigned int type = (unsigned int)icmpHeader->icmp_type;
-                if(type==3 && (code==1 || code==2 || code==3 || code==9 || code ==10 || code==13))
-                    status.udp_portState = kFiltered;
+                //icmp
+                //FIX:remove hardcoding
+                struct ip *iph = (struct ip*)(recPakcet+14);
+                logIpHeader(iph);
+//                if((unsigned int)iph->ip_p == IPPROTO_ICMP)
+//                {
+//                    //FIX:remove hard-coded value
+//                    struct icmp *icmpHeader = (struct icmp*)(recPakcet + 14 + 20);
+//                    //check is valid icmp is present
+//                    //struct ip *inner_ip = (struct ip*)(recPakcet + 14 +8);
+//                    struct udphdr *inner_udp = (struct udphdr*)(packet + 14 + 20 + 8 + 20);//ether+ip+icmp+orignal ip
+//
+//                    if(kRequest.srcPort == ntohs(inner_udp->uh_dport)&&(kRequest.destPort)==ntohs(inner_udp->uh_sport))
+//                    {
+//                        logICMPHeader(icmpHeader);
+//                        logUDPHeader(inner_udp);
+//                        unsigned int code = (unsigned int)icmpHeader->icmp_code;
+//                        unsigned int type = (unsigned int)icmpHeader->icmp_type;
+//                        if(type==3 && (code==1 || code==2 || code==3 || code==9 || code ==10 || code==13))
+//                            status.udp_portState = kFiltered;
+//
+//                        
+//                    }
+//                    
+//                }
+
             }
             
         }
@@ -672,7 +726,6 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         }
         
         
-    }
     
     
     
@@ -708,14 +761,14 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
-    //dev=this->devString;
-    dev="en0";
+    dev=this->devString;
+    //dev="en0";
     
     
     pcap_t *handle;
     struct bpf_program fp;
-    char filter_exp[] = "icmp || dst port ";
-    sprintf(filter_exp,"icmp || dst port %d",5678);
+    char filter_exp[256];
+    sprintf(filter_exp,"icmp || (ip dst host 140.182.146.113 && dst 5678)");
     
     bpf_u_int32 mask;
     bpf_u_int32 net;
@@ -745,8 +798,6 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     u_char *packet;
     packet = (u_char *)malloc(20);
     
-    
-    //
     //create socket and set options
     tcp.th_sport = htons(kRequest.srcPort);
     tcp.th_dport = htons(kRequest.destPort);
@@ -878,11 +929,14 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         
         bool isTcp = false;
         bool isIcmp = false;
+        int ip_hdr_size = 0;
+        
         
         if(isv6)
         {
             struct ip6_hdr *v6hdr;
             v6hdr = (struct ip6_hdr*)(recPakcet+14);
+            ip_hdr_size = sizeof(struct ip6_hdr);
             logIP6Header(v6hdr);
         }
         else{
@@ -892,11 +946,13 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             struct ip *iph = (struct ip*)(recPakcet + 14);
             isTcp = ((unsigned int)iph->ip_p == IPPROTO_TCP);
             isIcmp = ((unsigned int)iph->ip_p == IPPROTO_ICMP);
+            ip_hdr_size = sizeof(struct ip);
             logIpHeader(iph);
             
         }
         if(isTcp)
         {
+            //TODO : hardcode value of will change is this is ipv6
             struct tcphdr *tcpHdr = (struct tcphdr*)(recPakcet + 34);
             //check whether response is valid by comparing seq numbers and ack numbers
             unsigned long int ack = ntohl(tcpHdr->th_ack);
@@ -964,32 +1020,38 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         else if(isIcmp)
         {
             //Handle ICMP packets
-            
-            //cout<<"\n.......GOT ICMP FOR TCP";
-            struct icmp *icmph = (struct icmp*)(recPakcet + 14 + 20);
-            unsigned int code = (unsigned int)icmph->icmp_code;
-            unsigned int type = (unsigned int)icmph->icmp_type;
-            //logICMPHeader(icmph);
-            switch (kRequest.scanType) {
-                case SYN_SCAN:
+            //check if captured icmp is valid
+            //TODO:: remove hardcoded values for header lengths
+            struct icmp *icmph = (struct icmp*)(recPakcet + 14 + ip_hdr_size);
+            struct tcphdr *inner_tcp  = (struct tcphdr*)(recPakcet + 14 + ip_hdr_size + 8);
+            int inner_seq = ntohl(inner_tcp->th_seq);
+            if(inner_seq == tcp_seq)
+            {
+                //valid icmp
+                unsigned int code = (unsigned int)icmph->icmp_code;
+                unsigned int type = (unsigned int)icmph->icmp_type;
+                //logICMPHeader(icmph);
+                switch (kRequest.scanType)
                 {
-                    if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
-                        status.tcp_portState = kFiltered;
+                    case SYN_SCAN:
+                    {
+                        if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
+                            status.tcp_portState = kFiltered;
+                    }
+                        break;
+                        
+                    case ACK_SCAN:
+                    {
+                        if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
+                            status.tcp_portState = kFiltered;
+                    }
+                        break;
+                        
+                    default:
+                        break;
                 }
-                    break;
-                    
-                case ACK_SCAN:
-                {
-                    if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
-                        status.tcp_portState = kFiltered;
-                }
-                    break;
-                    
-                default:
-                    break;
+                
             }
-            
-            
             
         }
         
@@ -1144,16 +1206,60 @@ void ScanController::scanPorts()
         //else if job is protocol scan
         else if(nextJob.type == kProtocolScan)
         {
-            
-            nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
-            ProtocolScanRequest protoScanReq;
-            protoScanReq.protocolNumber = nextJob.protocolNumber;
-            protoScanReq.srcPort = nextJob.srcPort;
-            protoScanReq.sourceIp = nextJob.srcIp;
-            protoScanReq.destIp = nextJob.desIp;
-            ProtocolScanResult protoScanResult = runScanForProtocol(protoScanReq);
-            nextJob.protocolScanResult = protoScanResult;
-            //            cout<<"\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"<<nextJob.protocolNumber;
+            if(nextJob.protocolNumber == IPPROTO_TCP)
+            {
+                //For all ports gather scanresult for all types of scan
+//                ProtocolScanResult tcpScanResult;
+//                tcpScanResult.totalPortsScannedForProtocol = nextJob.totalPortsForProtocolScan;
+                for(int index = 0;index<nextJob.totalPortsForProtocolScan;index++)
+                {
+                    //for all ports do all types of tcp scan;
+                    AllScanResult allScanTypeResultForPort;
+                    int portNo = nextJob.portsForProtocolScan[index];
+                    allScanTypeResultForPort.portNo = portNo;
+
+                    //FIX: only SYN scan for port is done
+                    //TODO: other types of scans needs to be done;
+                    ScanRequest synRequest = createScanRequestFor(nextJob.srcPort, portNo, nextJob.srcIp, nextJob.desIp,SYN_SCAN);
+                    ScanResult synResult = sharedInstance->runTCPscan(synRequest);
+                    allScanTypeResultForPort.synState = synResult.tcp_portState;
+                    nextJob.protocolScanResult.tcpOrUdpPortScans.tcpProtoPortsScanResult[index]=allScanTypeResultForPort;
+
+                }
+
+            }
+            else if(nextJob.protocolNumber == IPPROTO_UDP)
+            {
+                //For all ports gather result for UDP scan result
+//                ProtocolScanResult  udpScanResult;
+//                udpScanResult.totalPortsScannedForProtocol = nextJob.totalPortsForProtocolScan;
+                for(int index=0;index<nextJob.totalPortsForProtocolScan;index++)
+                {
+                    
+                    int portNo = nextJob.portsForProtocolScan[index];
+                    AllScanResult scanResultForUDPport;
+                    scanResultForUDPport.portNo = portNo;
+                    
+                    ScanRequest udpScanReq = createScanRequestFor(nextJob.srcPort, portNo, nextJob.srcIp, nextJob.desIp,UDP_SCAN);
+                    ScanResult udpScanResultForPort = sharedInstance->runUDPScan(udpScanReq);
+                    scanResultForUDPport.udpState = udpScanResultForPort.udp_portState;
+                    nextJob.protocolScanResult.tcpOrUdpPortScans.udpPortsScanResult[index]=scanResultForUDPport;
+                }
+                
+            }
+            else if(nextJob.protocolNumber <= IPPROTO_MAX)//for other protocols including ICMP
+            {
+                //not port is involved
+                nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
+                ProtocolScanRequest protoScanReq;
+                protoScanReq.protocolNumber = nextJob.protocolNumber;
+                protoScanReq.srcPort = nextJob.srcPort;
+                protoScanReq.sourceIp = nextJob.srcIp;
+                protoScanReq.destIp = nextJob.desIp;
+                ProtocolScanResult protoScanResult = runScanForProtocol(protoScanReq);
+                nextJob.protocolScanResult = protoScanResult;
+
+            }
             submitJob(nextJob);
         }
     }
@@ -1182,13 +1288,14 @@ void ScanController::setUpJobsAndJobDistribution()
     for (int i=0; i<this->totalIpAddressToScan; i++) {
         const char *nextIp = this->allIpAddressToScan[i].c_str();
         
-        totalJobs = totalJobs+this->totalPortsToScan+this->totalProtocolsToScan;
+        totalJobs = totalJobs+this->totalPortsToScan;//+this->totalProtocolsToScan;
         for(int portIndex=0;portIndex<totalPortsToScan;portIndex++)
         {
             int destPort = this->portsToScan[portIndex];
             Job newJob;
             newJob.jobId = jobId;
             newJob.type = kPortScan;
+            //TODO: remove hard coding for SRC_PORT
             newJob.srcPort = SRC_PORT;
             newJob.desPort = destPort;
             newJob.srcIp = this->sourceIP;
@@ -1206,31 +1313,40 @@ void ScanController::setUpJobsAndJobDistribution()
             
         }
         
-//        for(int portNoIndex=0;portNoIndex<this->totalProtocolsToScan;portNoIndex++)
-//        {
-//            int proto = this->protocolNumbersToScan[portNoIndex];
-//            Job newJob;
-//            newJob.jobId =jobId;
-//            newJob.type = kProtocolScan;
-//            
-//            newJob.srcIp = this->sourceIP;
-//            newJob.desIp = (char*)nextIp;
-//            
-//            newJob.srcPort = NOT_REQUIRED;
-//            newJob.desPort = NOT_REQUIRED;
-//            
-//            newJob.protocolNumber = proto;
-//            newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-//            allJobs[jobId]=newJob;
-//            jobId++;
-//            
-//        }
+        totalJobs = totalJobs + this->totalProtocolsToScan;
+        
+        for(int portNoIndex=0;portNoIndex<this->totalProtocolsToScan;portNoIndex++)
+        {
+            int proto = this->protocolNumbersToScan[portNoIndex];
+            Job newJob;
+            newJob.jobId =jobId;
+            newJob.type = kProtocolScan;
+            if(proto == IPPROTO_TCP || proto == IPPROTO_UDP)
+            {
+                memcpy(newJob.portsForProtocolScan, this->portsToScan, this->totalPortsToScan);
+                newJob.totalPortsForProtocolScan = this->totalPortsToScan;
+            }
+            else
+                newJob.totalPortsForProtocolScan = -1;
+
+            newJob.srcIp = this->sourceIP;
+            newJob.desIp = (char*)nextIp;
+
+            newJob.srcPort = NOT_REQUIRED;
+            newJob.desPort = NOT_REQUIRED;
+
+            newJob.protocolNumber = proto;
+            newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
+            allJobs[jobId]=newJob;
+            jobId++;
+
+        }
         
     }
     cout<<"\n Total Jobs"<<totalJobs;

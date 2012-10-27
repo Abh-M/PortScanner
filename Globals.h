@@ -9,20 +9,18 @@
 #include "PCH.h"
 
 #pragma mark - constants
-#define SETLOCAL 0
 
-#define TCP_SOURCE_PORT 5678
-#define TCP_SRC_IP "127.0.0.1"
+
+/*..........Header length constans.................*/
+
+
 
 #define SRC_PORT 5678
 #define DEST_PORT 2008
 
 
-#define PORT_NOT_REQUIRED -999
 #define NOT_REQUIRED -999
 
-#define LOCALHST 0
-#define APPLE 1
 
 //#define SRC_IP "127.0.0.1"
 //#define SRC_IP "10.0.0.3"
@@ -41,7 +39,7 @@
 //#define DEST_IP "69.171.242.70"
 //#define DEST_IP "182.18.135.36"
 //giganta
-#define DEST_IP "129.79.246.79"
+//#define DEST_IP "129.79.246.79"
 //#define DEST_IP "129.79.247.195"
 //#define DEST_IP "203.199.134.78"
 //#define DEST_IP "2607:f8b0:400f:801::1014"
@@ -189,6 +187,7 @@ typedef struct ProtocolScanRequest
     char *sourceIp;
     char *destIp;
     int srcPort;
+    int desPort;
     
 }ProtocolScanRequest;
 
@@ -198,6 +197,11 @@ typedef struct ProtocolScanResult
     bool protocolSupported;
     int icmp_code;
     int icmp_type;
+    int totalPortsScannedForProtocol;
+    union{
+        AllScanResult tcpProtoPortsScanResult[MAX_PORTS];
+        AllScanResult udpPortsScanResult[MAX_PORTS];
+    }tcpOrUdpPortScans;
 }ProtocolScanResult;
 
 
@@ -230,6 +234,8 @@ typedef struct kJob
     
     int protocolNumber;
     ProtocolScanResult protocolScanResult;
+    int portsForProtocolScan[MAX_PORTS];
+    int totalPortsForProtocolScan;
     
 }Job;
 

@@ -240,21 +240,37 @@ int main(int argc, const char * argv[])
     
     
     
-    ScanRequest newReq;
-    newReq.srcPort = 5678;
-    newReq.destPort = 80;
-    newReq.scanType = SYN_SCAN;
-//    newReq.destIp = "::1";
-    newReq.destIp = "2607:f8b0:400c:c01::69";
-    con->runTCPscan(newReq);
+//    ScanRequest newReq;
+//    newReq.srcPort = 5678;
+//    newReq.destPort = 80;
+//    newReq.scanType = SYN_SCAN;
+////    newReq.destIp = "::1";
+//    newReq.destIp = "2607:f8b0:400c:c01::69";
+//    con->runTCPscan(newReq);
+    
+//    2001:4860:4860::8888
+    //2001:18e8:2:28a6:462a:60ff:fef3:c6ae
+    ScanRequest udpScanReq;// = createScanRequestFor(5678, 53, con->hostDevAndIp.ip, "8.8.8.8",UDP_SCAN);
+//    udpScanReq.destIp = "8.8.8.8";
+        udpScanReq.destIp = "129.79.246.79";
+    udpScanReq.sourceIp = con->hostDevAndIp.ip;
+//    udpScanReq.destIp = "2001:4860:4860::8888";
+//    udpScanReq.sourceIp = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
+//    udpScanReq.destIp = "::1";
+//    udpScanReq.sourceIp = "::1";
+
+
+    udpScanReq.srcPort = 5678;
+        udpScanReq.destPort = 1080;
+    ScanResult udpScanResultForPort = con->runUDPScan(udpScanReq);
+
 
     
-    //con->populateIpAddressToScan(allIPaddress);
-    //cout<<"\n Total Ip address"<<allIPaddress.size();
-    //set source and destination IP address and then start scan
-    //con->setTargetIPAddress(DEST_IP);
-    //con->spawnThreads=false;
-    //con->startScan();
+//con->populateIpAddressToScan(allIPaddress);
+//cout<<"\n Total Ip address"<<allIPaddress.size();
+////con->setTargetIPAddress(DEST_IP);
+//con->spawnThreads=false;
+//con->startScan();
     
     
     
