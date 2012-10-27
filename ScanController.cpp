@@ -555,7 +555,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     //set filter exp depending upon source port
     //TODO: dynamically generate pcap filter expressions
     char filter_exp[256];
-    sprintf(filter_exp,"dst %s",kRequest.sourceIp);
+    sprintf(filter_exp,"icmp && dst host %s",kRequest.sourceIp);
     cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -566,7 +566,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         net = 0;
         mask = 0;
     }
-    handle = pcap_open_live(dev, 65535, 1, 2000, errBuff);
+    handle = pcap_open_live(dev, 65535, 1, 3000, errBuff);
     if (handle == NULL) {
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
     }
@@ -591,7 +591,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
 //        packet = (u_char *)malloc(sizeof(struct udphdr)); // as we do dont fill up ipv6 header
 //    else
         packet = (u_char *)malloc(60);
-    //memset(&packet,0,60);
+//        memset(&packet,'\0',60);
 
     cout<<"\n....<<>>"<<sizeof(packet);
     
@@ -618,9 +618,9 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         udp.uh_dport = htons(kRequest.destPort);
         udp.uh_ulen = htons(8);
         udp.uh_sum = 0;
-        udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
+       // udp.uh_sum = in_cksum_udp(ip.ip_src.s_addr, ip.ip_dst.s_addr, (unsigned short *)&udp, sizeof(udp));
         memcpy(packet + 20, &udp, sizeof(udp));
-
+        
 
         
         if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
@@ -696,20 +696,30 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
             {
                 //icmp
                 //FIX:remove hardcoding
+                struct ip iip;
                 struct ip *iph = (struct ip*)(recPakcet+14);
+                iip.ip_dst = iph->ip_dst;
+                iip.ip_src = iph->ip_src;
+                logIpHeader(iph);
+                srcDesIpv4 srcAndDes = getIpPairForIpHeader(iph);
                 //cross check source and destination address
-                if( (strcmp(inet_ntoa(iph->ip_src), kRequest.destIp))==0 && (strcmp(inet_ntoa(iph->ip_dst), kRequest.sourceIp))==0)
+                if( (strcmp(srcAndDes.src, kRequest.destIp))==0 && (strcmp(srcAndDes.des, kRequest.sourceIp))==0)
                 {
-                    logIpHeader(iph);
+//                    logIpHeader(iph);
                     if((unsigned int)iph->ip_p == IPPROTO_ICMP)
                     {
                         //FIX:remove hard-coded value
                         struct icmp *icmpHeader = (struct icmp*)(recPakcet + 14 + 20);
+//                        logICMPHeader(icmpHeader);
                         //check is valid icmp is present
-                        //struct ip *inner_ip = (struct ip*)(recPakcet + 14 +8);
-                        struct udphdr *inner_udp = (struct udphdr*)(packet + 14 + 20 + 8 + 20);//ether+ip+icmp+orignal ip
+//                        struct ip *inner_ip = (struct ip*)(recPakcet + 14 + 20 +8);
+//                        logIpHeader(inner_ip);
+                        struct udphdr *inner_udp = (struct udphdr*)(recPakcet + 14+20+8+20);//ether+ip+icmp+orignal ip
+//                        logUDPHeader(inner_udp);
+                        unsigned short  kk= ntohs(inner_udp->uh_dport);
                         
-                        if(kRequest.srcPort == ntohs(inner_udp->uh_dport)&&(kRequest.destPort)==ntohs(inner_udp->uh_sport))
+                        //as inner udp will have same source and dest port as the orignal request
+                        if(kRequest.srcPort == ntohs(inner_udp->uh_sport)&&(kRequest.destPort)==ntohs(inner_udp->uh_dport))
                         {
                             logICMPHeader(icmpHeader);
                             logUDPHeader(inner_udp);

@@ -73,15 +73,51 @@ unsigned short in_cksum_udp(int src, int dst, unsigned short *addr, int len)
 	return in_cksum((unsigned short *)&buf, 12 + len);
 }
 
+
+void logIpHeader2(struct ip kIpHdr)
+{
+    
+    char des[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(kIpHdr.ip_dst), des, INET_ADDRSTRLEN);
+
+    cout<<".............."<<des;
+    cout<<"\nIP  "<<" | src: "<<inet_ntoa(kIpHdr.ip_src)
+    <<" | des: "<<inet_ntoa(kIpHdr.ip_dst);
+    //    <<" | total length: "<<ntohs(kIpHdr->ip_len)
+    //    <<" | protocol: "<<(unsigned int)kIpHdr->ip_p
+    //    <<" | header length : "<<(kIpHdr->ip_hl);
+}
 void logIpHeader(struct ip *kIpHdr)
 {
     
-    cout<<"\nIP  "<<" | src: "<<inet_ntoa(kIpHdr->ip_src)
-    <<" | des: "<<inet_ntoa(kIpHdr->ip_dst)
+    srcDesIpv4 ipPair;
+    char src[INET_ADDRSTRLEN];
+    char des[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &kIpHdr->ip_src, src, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &kIpHdr->ip_dst, des, INET_ADDRSTRLEN);
+    strcpy(ipPair.src, src);
+    strcpy(ipPair.des, des);
+    cout<<"\nIP  "<<" | src: "<<src
+    <<" | des: "<<des
     <<" | total length: "<<ntohs(kIpHdr->ip_len)
     <<" | protocol: "<<(unsigned int)kIpHdr->ip_p
     <<" | header length : "<<(kIpHdr->ip_hl);
 }
+
+srcDesIpv4 getIpPairForIpHeader(struct ip *kIpHdr)
+{
+    
+    srcDesIpv4 ipPair;
+    char src[INET_ADDRSTRLEN];
+    char des[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &kIpHdr->ip_src, src, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &kIpHdr->ip_dst, des, INET_ADDRSTRLEN);
+    strcpy(ipPair.src, src);
+    strcpy(ipPair.des, des);
+
+    return ipPair;
+}
+
 
 void logTCPHeader(struct tcphdr *kHeader){
     cout<<"---------TCP HEADER-----------"<<endl;

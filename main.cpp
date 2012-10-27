@@ -7,8 +7,7 @@
 //
 
 #include "PCH.h"
-#include "ScanController.h"
-
+#include "ScanController.h" 
 #include "Helpers.h"
 #include "Utils.h"
 
@@ -253,17 +252,17 @@ int main(int argc, const char * argv[])
     ScanRequest udpScanReq;// = createScanRequestFor(5678, 53, con->hostDevAndIp.ip, "8.8.8.8",UDP_SCAN);
     //udpScanReq.destIp = "8.8.8.8";
         udpScanReq.destIp = "129.79.246.79";
-//    udpScanReq.sourceIp = con->hostDevAndIp.ip;
+    udpScanReq.sourceIp = con->hostDevAndIp.ip;
 //    udpScanReq.destIp = "2607:f8b0:400c:c01::69";
 //    udpScanReq.sourceIp = "fe80::462a:60ff:fef3:c6ae";
 //    udpScanReq.destIp = "::1";
 //    udpScanReq.sourceIp = "::1";
     
-        udpScanReq.sourceIp = "140.182.146.113";
+        //udpScanReq.sourceIp = "140.182.146.113";
 
 
     udpScanReq.srcPort = 5678;
-        udpScanReq.destPort = 1080;
+        udpScanReq.destPort = 45;
     ScanResult udpScanResultForPort = con->runUDPScan(udpScanReq);
 
 

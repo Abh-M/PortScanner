@@ -23,10 +23,12 @@ bool isIpV6(const char *add);
 
 void logUDPHeader(struct udphdr *header);
 void logIpHeader(struct ip *kIpHdr);
+//void logIpHeader2(struct ip kIpHdr);
 void logTCPHeader(struct tcphdr *kHeader);
 void logICMPHeader(struct icmp *header);
 void logIP6Header(struct ip6_hdr *hdr);
 
+srcDesIpv4 getIpPairForIpHeader(struct ip *kIpHdr);
 
 
 #endif

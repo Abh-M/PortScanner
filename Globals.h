@@ -122,7 +122,11 @@ struct psd_tcp {
 #pragma mark - structures
 
 
-
+typedef struct
+{
+    char src[INET_ADDRSTRLEN];
+    char des[INET_ADDRSTRLEN];
+}srcDesIpv4;
 
 typedef struct devNamesAndIp
 {
