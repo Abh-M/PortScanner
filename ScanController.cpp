@@ -284,14 +284,24 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     
     bool isv6 = isIpV6(req.destIp);
-    
+	    
     
     
     char *dev, errBuff[50];
-    dev=this->devString;
-    dev="en0";
-    //cout<<dev;
+    bool islhost = islocalhost(req.destIp);
+    int eth_fr_size;
     
+    if(islhost)
+    {
+        dev = this->hostDevAndIp.localhost_dev;
+        eth_fr_size=4;
+    }
+    else
+    {
+        dev = this->hostDevAndIp.dev;
+        eth_fr_size = 14;
+    }
+    cout<<dev;
     
     pcap_t *handle;
     
@@ -918,11 +928,6 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         dev = this->hostDevAndIp.dev;
         eth_fr_size = 14;
     }
-    
-    //dev=this->devString;
-    
-    //dev="en0";
-    
     
     pcap_t *handle;
     struct bpf_program fp;
