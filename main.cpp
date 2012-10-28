@@ -276,17 +276,20 @@ int main(int argc, const char * argv[])
     req.srcPort = 5678;
     req.desPort = 45;
     req.sourceIp = con->hostDevAndIp.ip;
-        req.sourceIp = "127.0.0.1";
+        req.sourceIp = "2001:18e8:2:28a6:354a:d9cc:2b81:d47a";
 //    req.destIp = "140.182.147.5";
-        req.destIp = "127.0.0.1";
-    for(int i=0;i<=255;i++)
-    {
-        cout<<"\n---------------------------\n";
-        req.protocolNumber = i;
+//        req.destIp = "127.0.0.1";
+    req.destIp="fe80::222:fbff:fe19:fb8e";
+//    req.destIp = "2607:f8b0:400c:c01::69";
+//        req.destIp = "2001:4860:4860::8844";
+//    for(int i=0;i<=255;i++)
+//    {
+//        cout<<"\n---------------------------\n";
+        req.protocolNumber = 213;
         con->runScanForProtocol(req);
         cout<<"\n---------------------------\n";
         
-    }
+//    }
 
 
     

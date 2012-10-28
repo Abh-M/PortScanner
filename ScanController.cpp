@@ -279,11 +279,15 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     result.protocolSupported = false;
     result.icmp_code = INVALID_CODE;
     result.icmp_type = INVALID_TYPE;
-    //// Set pcap parameters
+    
+    
+    bool isv6 = isIpV6(req.destIp);
+    
+    
     
     char *dev, errBuff[50];
     dev=this->devString;
-    dev="lo0";
+    dev="en0";
     //cout<<dev;
     
     
@@ -292,10 +296,17 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     struct bpf_program fp;
     
-    //set filter exp depending upon source port
     char filter_exp[100];
+    if(isv6)
+    {
+        sprintf(filter_exp,"icmp6 && src host %s",req.destIp);
+        
+    }
+    else
+    {
+        sprintf(filter_exp,"icmp && src host %s",req.destIp);
+    }
     
-    sprintf(filter_exp,"icmp && src host %s",req.destIp);
     //cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
@@ -325,58 +336,106 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     struct sockaddr_in sin;
     u_char *packet;
     
-    packet = (u_char *)malloc(60);
-    
-    ip.ip_hl = 0x5;
-    ip.ip_v = 0x4;
-    ip.ip_tos = 0x0;
-    ip.ip_len = 60;
-    ip.ip_id = htons(ip_id);
-    ip.ip_off = 0x0;
-    ip.ip_ttl = 64;
-    //imp
-    ip.ip_p = req.protocolNumber;
-    //
-    ip.ip_sum = 0x0;
-    //IMP
-    ip.ip_src.s_addr = inet_addr(req.sourceIp);
-    ip.ip_dst.s_addr =  inet_addr(req.destIp);
-    ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
-    //IMP
-    memcpy(packet, &ip, sizeof(ip));
-    
-    
-    if(ip.ip_p == IPPROTO_ICMP)
+    if(!isv6)
     {
-        struct icmp icmphd;
-        icmphd.icmp_type = ICMP_ECHO;
-        icmphd.icmp_code = 0;
-        icmphd.icmp_id = 1000;
-        icmphd.icmp_seq = 0;
-        //icmphd.icmp_cksum = 0;
-        icmphd.icmp_cksum = in_cksum((unsigned short *)&icmphd, 8);
-        memcpy(packet + 20, &icmphd, 8);
-        //cout<<"SCANNIN XXXX ICMP"<<endl;
+        packet = (u_char *)malloc(60);
+        
+        ip.ip_hl = 0x5;
+        ip.ip_v = 0x4;
+        ip.ip_tos = 0x0;
+        ip.ip_len = 60;
+        ip.ip_id = htons(ip_id);
+        ip.ip_off = 0x0;
+        ip.ip_ttl = 64;
+        //imp
+        ip.ip_p = req.protocolNumber;
+        //
+        ip.ip_sum = 0x0;
+        //IMP
+        ip.ip_src.s_addr = inet_addr(req.sourceIp);
+        ip.ip_dst.s_addr =  inet_addr(req.destIp);
+        ip.ip_sum = in_cksum((unsigned short *)&ip, sizeof(ip));
+        //IMP
+        memcpy(packet, &ip, sizeof(ip));
+        
+        
+        if(ip.ip_p == IPPROTO_ICMP)
+        {
+            struct icmp icmphd;
+            icmphd.icmp_type = ICMP_ECHO;
+            icmphd.icmp_code = 0;
+            icmphd.icmp_id = 1000;
+            icmphd.icmp_seq = 0;
+            //icmphd.icmp_cksum = 0;
+            icmphd.icmp_cksum = in_cksum((unsigned short *)&icmphd, 8);
+            memcpy(packet + 20, &icmphd, 8);
+            //cout<<"SCANNIN XXXX ICMP"<<endl;
+        }
+        
+        
+        if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+            perror("raw socket");
+            exit(1);
+        }
+        
+        if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+            perror("setsockopt");
+            exit(1);
+        }
+        memset(&sin, 0, sizeof(sin));
+        sin.sin_family = AF_INET;
+        sin.sin_addr.s_addr = ip.ip_dst.s_addr;
+        
+        if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
+            perror("sendto");
+            exit(1);
+        }
+        
+        
+    }
+    else if(isv6)
+    {
+        packet = (u_char *)malloc(sizeof(struct icmp6_hdr));
+        const char* des =  req.destIp;// "::1";
+        struct sockaddr_in6 desa; desa.sin6_family=AF_INET6; inet_pton(AF_INET6, des, &desa.sin6_addr);
+        if(req.protocolNumber == IPPROTO_ICMP)
+        {
+            struct icmp6_hdr icmp6hdr;
+            icmp6hdr.icmp6_type = ICMP6_ECHO_REQUEST;
+            icmp6hdr.icmp6_code = 0;
+            icmp6hdr.icmp6_cksum = 0;
+            //icmphd.icmp_cksum = in_cksum((unsigned short *)&icmphd, 8);
+            memcpy(packet, &icmp6hdr, 8);
+        }
+        
+        
+        sd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+        int offset=2;
+        if (setsockopt(sd, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)) < 0) {
+            perror("setsockopt");
+            exit(1);
+        }
+        struct iovec iov;
+        struct  msghdr msg;
+        memset(&msg, 0, sizeof(struct msghdr));
+        
+        iov.iov_base = packet;
+        iov.iov_len =sizeof(struct icmp6_hdr);
+        msg.msg_iov = &iov;
+        msg.msg_iovlen = 1;
+        msg.msg_name = &desa;
+        msg.msg_namelen = sizeof(desa);
+        msg.msg_control = NULL;
+        msg.msg_controllen=0;
+        size_t res=0;
+        res  =  sendmsg(sd, &msg,0);
+        cout<<"\n"<<res;
+        
+        
+        
     }
     
     
-    if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-        perror("raw socket");
-        exit(1);
-    }
-    
-    if (setsockopt(sd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-        perror("setsockopt");
-        exit(1);
-    }
-    memset(&sin, 0, sizeof(sin));
-    sin.sin_family = AF_INET;
-    sin.sin_addr.s_addr = ip.ip_dst.s_addr;
-    
-    if (sendto(sd, packet, 60, 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) < 0)  {
-        perror("sendto");
-        exit(1);
-    }
     
     
     //RECV
@@ -387,38 +446,87 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     if(recPakcet!=NULL)
     {
         printf("\nJacked a packet with length of [%d]\n", header.caplen);
-        struct ip *iph = (struct ip*)(recPakcet+14);
-        logIpHeader(iph);
-
-        unsigned int proto = (unsigned)iph->ip_p;
-        if((strcmp(inet_ntoa(iph->ip_src), req.destIp))==0)
+        
+        if(isv6)
         {
-            if(proto==IPPROTO_ICMP )
+            //icmpv6
+            //TODO : hardcoded value of 6 is for localhost need to fix this
+            struct ip6_hdr *ip6 = (struct ip6_hdr*)(recPakcet+14);
+            logIP6Header(ip6);
+            srcDesIpv6 ipPair = getIpPairForIp6Header(ip6);
+            if(  ((strcmp(ipPair.src, req.destIp))==0) && ((strcmp(ipPair.des, req.sourceIp))==0) )
             {
-//                cout<<"\n Protocol Number "<<req.protocolNumber<<endl;
-                struct icmp *icmpHdr = (struct icmp*)(recPakcet  + 20 + 14);
-                struct ip *p =(struct ip*)(recPakcet+14+20+8);
-//                cout<<"\n....."<<ntohs(p->ip_id)<<"----"<<ip_id;
-                if(ntohs(p->ip_id)==ip_id)
+                //FIX: 14 is inconsistent
+                struct icmp6_hdr *icmp6 = (struct icmp6_hdr*)(recPakcet+14+40);
+                logICMP6Header(icmp6);
+                //check if reply
+                if((unsigned short)icmp6->icmp6_type==ICMP6_ECHO_REPLY){
+                    //set status
+                    result.icmp_type = (unsigned short)icmp6->icmp6_type;
+                    result.icmp_type = (unsigned short)icmp6->icmp6_code;
+                    
+                }
+                else//analyze payload
                 {
-                    logICMPHeader(icmpHdr);
-                    logIpHeader(p);
-                    result.icmp_code = (unsigned int)icmpHdr->icmp_code;
-                    result.icmp_type = (unsigned int)icmpHdr->icmp_type;
+                    struct ip6_hdr *inner_ip6 = (struct ip6_hdr*)(recPakcet+14+40+8);
+                    logIP6Header(inner_ip6);
+                    //                struct udphdr *inner_udp = (struct udphdr*)(recPakcet+4+40+8+40);
+                    //                if(kRequest.srcPort == ntohs(inner_udp->uh_sport)&&(kRequest.destPort)==ntohs(inner_udp->uh_dport))
+                    //                {
+                    //                    logUDPHeader(inner_udp);
+                    //                    unsigned int code = (unsigned short)icmp6->icmp6_code;
+                    //                    unsigned int type = (unsigned short)icmp6->icmp6_type;
+                    //                    if(type==3 && (code==1 || code==2 || code==3 || code==9 || code ==10 || code==13))
+                    //                        status.udp_portState = kFiltered;
+                    //                    else{
+                    //                        status.udp_portState = kUnkown;
+                    //                    }
+                    //                    
+                    //                }
+
+                    
+                }
+            }
+            
+        }
+        else
+        {
+            struct ip *iph = (struct ip*)(recPakcet+14);
+            logIpHeader(iph);
+            
+            unsigned int proto = (unsigned)iph->ip_p;
+            if((strcmp(inet_ntoa(iph->ip_src), req.destIp))==0)
+            {
+                if(proto==IPPROTO_ICMP )
+                {
+                    //cout<<"\n Protocol Number "<<req.protocolNumber<<endl;
+                    struct icmp *icmpHdr = (struct icmp*)(recPakcet  + 20 + 14);
+                    struct ip *p =(struct ip*)(recPakcet+14+20+8);
+                    //                cout<<"\n....."<<ntohs(p->ip_id)<<"----"<<ip_id;
+                    if(ntohs(p->ip_id)==ip_id)
+                    {
+                        logICMPHeader(icmpHdr);
+                        logIpHeader(p);
+                        result.icmp_code = (unsigned int)icmpHdr->icmp_code;
+                        result.icmp_type = (unsigned int)icmpHdr->icmp_type;
+                    }
+                    
+                    
+                }
+                else{
+                    cout<<"\n Other Protocol Number "<<proto;
                 }
                 
                 
             }
-            else{
-                cout<<"\n Other Protocol Number "<<proto;
+            
+            else
+            {
+                cout<<"\n Invalid  packet";
+                result.protocolSupported = false;
             }
+            
         }
-        else
-        {
-            cout<<"\n Invalid  packet";
-            result.protocolSupported = false;
-        }
-        
     }
     else //no packet recieved
     {
@@ -668,7 +776,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         //check for icmp or icmpv6 depending
         if(isv6){
             //icmpv6
-            
+            //TODO : hardcoded value of 6 is for localhost need to fix this
             struct ip6_hdr *ip6 = (struct ip6_hdr*)(recPakcet+4);
             logIP6Header(ip6);
             srcDesIpv6 ipPair = getIpPairForIp6Header(ip6);
