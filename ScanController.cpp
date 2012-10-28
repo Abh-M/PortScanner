@@ -99,6 +99,8 @@ ScanController::ScanController() {
     //populate protocol numbers to scan by default
     populateProtocolNumberToScan();
     
+    
+    
 }
 
 void ScanController::resetAllScanTypes()
@@ -619,11 +621,21 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     
     bool isv6= isIpV6(kRequest.destIp);
     
-    //// Set pcap parameters
     
     char *dev, errBuff[50];
-    dev = this->devString;
-    dev = "en0";
+    bool islhost = islocalhost(kRequest.destIp);
+    int eth_fr_size;
+    
+    if(islhost)
+    {
+        dev = this->hostDevAndIp.localhost_dev;
+        eth_fr_size=4;
+    }
+    else
+    {
+        dev = this->hostDevAndIp.dev;
+        eth_fr_size = 14;
+    }
     cout<<dev;
     
     
@@ -777,17 +789,17 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         if(isv6){
             //icmpv6
             //TODO : hardcoded value of 6 is for localhost need to fix this
-            struct ip6_hdr *ip6 = (struct ip6_hdr*)(recPakcet+4);
+            struct ip6_hdr *ip6 = (struct ip6_hdr*)(recPakcet+eth_fr_size);
             logIP6Header(ip6);
             srcDesIpv6 ipPair = getIpPairForIp6Header(ip6);
             if(  ((strcmp(ipPair.src, kRequest.destIp))==0) && ((strcmp(ipPair.des, kRequest.sourceIp))==0) )
             {
                 
-                struct icmp6_hdr *icmp6 = (struct icmp6_hdr*)(recPakcet+4+40);
+                struct icmp6_hdr *icmp6 = (struct icmp6_hdr*)(recPakcet+eth_fr_size+40);
                 logICMP6Header(icmp6);
-                struct ip6_hdr *inner_ip6 = (struct ip6_hdr*)(recPakcet+4+40+8);
+                struct ip6_hdr *inner_ip6 = (struct ip6_hdr*)(recPakcet+eth_fr_size+40+8);
                 logIP6Header(inner_ip6);
-                struct udphdr *inner_udp = (struct udphdr*)(recPakcet+4+40+8+40);
+                struct udphdr *inner_udp = (struct udphdr*)(recPakcet+eth_fr_size+40+8+40);
                 if(kRequest.srcPort == ntohs(inner_udp->uh_sport)&&(kRequest.destPort)==ntohs(inner_udp->uh_dport))
                 {
                     logUDPHeader(inner_udp);
@@ -808,7 +820,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
             //icmp
             //FIX:remove hardcoding
             struct ip iip;
-            struct ip *iph = (struct ip*)(recPakcet+14);
+            struct ip *iph = (struct ip*)(recPakcet+eth_fr_size);
             iip.ip_dst = iph->ip_dst;
             iip.ip_src = iph->ip_src;
             logIpHeader(iph);
@@ -820,12 +832,12 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
                 if((unsigned int)iph->ip_p == IPPROTO_ICMP)
                 {
                     //FIX:remove hard-coded value
-                    struct icmp *icmpHeader = (struct icmp*)(recPakcet + 14 + 20);
+                    struct icmp *icmpHeader = (struct icmp*)(recPakcet + eth_fr_size + 20);
                     //                        logICMPHeader(icmpHeader);
                     //check is valid icmp is present
                     //                        struct ip *inner_ip = (struct ip*)(recPakcet + 14 + 20 +8);
                     //                        logIpHeader(inner_ip);
-                    struct udphdr *inner_udp = (struct udphdr*)(recPakcet + 14+20+8+20);//ether+ip+icmp+orignal ip
+                    struct udphdr *inner_udp = (struct udphdr*)(recPakcet + eth_fr_size+20+8+20);//ether+ip+icmp+orignal ip
                     //                        logUDPHeader(inner_udp);
                     unsigned short  kk= ntohs(inner_udp->uh_dport);
                     
@@ -1320,7 +1332,7 @@ void ScanController::scanPorts()
         Job nextJob = allJobs[index];
         
         //if job is port scan
-        if(nextJob.type == kPortScan)
+        if(nextJob.type == kPortScan && false)
         {
             nextJob.result.portNo = nextJob.desPort;
             nextJob.result.synState = kNotUsed;
@@ -1382,7 +1394,7 @@ void ScanController::scanPorts()
         //else if job is protocol scan
         else if(nextJob.type == kProtocolScan)
         {
-            if(nextJob.protocolNumber == IPPROTO_TCP)
+            if(nextJob.protocolNumber == IPPROTO_TCP && false)
             {
                 //For all ports gather scanresult for all types of scan
                 //                ProtocolScanResult tcpScanResult;
@@ -1423,7 +1435,7 @@ void ScanController::scanPorts()
                 }
                 
             }
-            else if(nextJob.protocolNumber <= IPPROTO_MAX)//for other protocols including ICMP
+            else if(nextJob.protocolNumber <= IPPROTO_MAX && false)//for other protocols including ICMP
             {
                 //not port is involved
                 nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
@@ -1489,40 +1501,40 @@ void ScanController::setUpJobsAndJobDistribution()
             
         }
         
-//        totalJobs = totalJobs + this->totalProtocolsToScan;
-//        
-//        for(int portNoIndex=0;portNoIndex<this->totalProtocolsToScan;portNoIndex++)
-//        {
-//            int proto = this->protocolNumbersToScan[portNoIndex];
-//            Job newJob;
-//            newJob.jobId =jobId;
-//            newJob.type = kProtocolScan;
-//            if(proto == IPPROTO_TCP || proto == IPPROTO_UDP)
-//            {
-//                memcpy(newJob.portsForProtocolScan, this->portsToScan, this->totalPortsToScan);
-//                newJob.totalPortsForProtocolScan = this->totalPortsToScan;
-//            }
-//            else
-//                newJob.totalPortsForProtocolScan = -1;
-//            
-//            newJob.srcIp = this->sourceIP;
-//            newJob.desIp = (char*)nextIp;
-//            
-//            newJob.srcPort = NOT_REQUIRED;
-//            newJob.desPort = NOT_REQUIRED;
-//            
-//            newJob.protocolNumber = proto;
-//            newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
-//            newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-//            allJobs[jobId]=newJob;
-//            jobId++;
-//            
-//        }
+        totalJobs = totalJobs + this->totalProtocolsToScan;
+
+        for(int portNoIndex=0;portNoIndex<this->totalProtocolsToScan;portNoIndex++)
+        {
+            int proto = this->protocolNumbersToScan[portNoIndex];
+            Job newJob;
+            newJob.jobId =jobId;
+            newJob.type = kProtocolScan;
+            if(proto == IPPROTO_TCP || proto == IPPROTO_UDP)
+            {
+                memcpy(newJob.portsForProtocolScan, this->portsToScan, this->totalPortsToScan);
+                newJob.totalPortsForProtocolScan = this->totalPortsToScan;
+            }
+            else
+                newJob.totalPortsForProtocolScan = -1;
+            
+            newJob.srcIp = this->sourceIP;
+            newJob.desIp = (char*)nextIp;
+            
+            newJob.srcPort = SRC_PORT;
+            newJob.desPort = NOT_REQUIRED;
+            
+            newJob.protocolNumber = proto;
+            newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
+            newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
+            allJobs[jobId]=newJob;
+            jobId++;
+            
+        }
         
     }
     cout<<"\n Total Jobs"<<totalJobs;
