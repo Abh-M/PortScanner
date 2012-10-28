@@ -11,6 +11,17 @@
 
 using namespace std;
 
+
+
+bool islocalhost(char *kip)
+{
+    bool result= false;
+    if(strcmp(kip, "127.0.0.1")==0 || strcmp(kip, "0.0.0.0")==0 || strcmp("::1", kip)==0 )
+        result = true;
+    
+    return result;
+}
+
 struct psd_udp {
 	struct in_addr src;
 	struct in_addr dst;
@@ -137,10 +148,9 @@ srcDesIpv6 getIpPairForIp6Header(struct ip6_hdr *kIpHdr)
 
 
 void logTCPHeader(struct tcphdr *kHeader){
-    cout<<"---------TCP HEADER-----------"<<endl;
-    cout<<"SOURCE PORT      : "<<ntohs(kHeader->th_sport)<<endl;
-    cout<<"DESTINATION PORT : "<<ntohs(kHeader->th_dport)<<endl;
-    cout<<"FLAGS            : ";
+        cout<<"\nTCP  |SOURCE PORT: "<<ntohs(kHeader->th_sport)
+        <<" |DESTINATION PORT: "<<ntohs(kHeader->th_dport)
+        <<" |FLAGS: ";
     if (kHeader->th_flags & TH_SYN)
         putchar('S');
     if(kHeader->th_flags & TH_ACK)
@@ -150,11 +160,10 @@ void logTCPHeader(struct tcphdr *kHeader){
     if (kHeader->th_flags & TH_RST)
         putchar('R');
     
-    cout<<endl;
-    cout<<"ACK              : "<<(unsigned int)ntohl(kHeader->th_ack)<<endl;
-    cout<<"SEQ              : "<<ntohl(kHeader->th_seq)<<endl;
+
+    cout<<" |ACK :"<<(unsigned int)ntohl(kHeader->th_ack)
+        <<" |SEQ :"<<ntohl(kHeader->th_seq)<<endl;
     
-    cout<<"---------TCP HEADER-----------"<<endl;
 }
 
 
@@ -207,6 +216,10 @@ devAndIp getMyIpAddress()
 {
     devAndIp result;
     
+    const char *v6 ="2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
+    const char *ll = "::1";
+    strcpy(result.ipv6,v6);
+    strcpy(result.localHost_ipv6, ll);
     char ipaddr[15];
     
     const char *dummyDest = "74.125.225.209";

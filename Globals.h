@@ -138,9 +138,11 @@ typedef struct
 
 typedef struct devNamesAndIp
 {
-    char localHost_ip[15];
-    char ip[15];
+    char localHost_ip[INET_ADDRSTRLEN];
+    char ip[INET_ADDRSTRLEN];
+    char localHost_ipv6[INET6_ADDRSTRLEN];
     char localhost_dev[5];
+    char ipv6[INET6_ADDRSTRLEN];
     char dev[5];
 }devAndIp;
 
