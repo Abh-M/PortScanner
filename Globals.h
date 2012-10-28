@@ -71,6 +71,21 @@
 #define UNKNOWN_SCAN -1
 
 
+//-----------  variables for multi-threading---------------//
+#define MAX_WORKERS 5
+#define NO_WORKERS 0
+#define JOB_START_INDEX 0
+#define JOB_END_INDEX 1
+#define JOB_CURRENT_INDEX 2
+#define NO_JOB -99
+#define NOT_STARTED -1
+#define MAX_PROTOCOL_NUMBERS 256
+#define MAX_PORTS 65536
+#define MIN_PORTS 1
+#define MAX_JOBS MAX_PORTS+MAX_PROTOCOL_NUMBERS
+//--------------------------------------------------------//
+
+
 
 typedef enum{
     kSYN,
@@ -106,9 +121,6 @@ typedef enum{
 
 
 
-#define MAX_PROTOCOL_NUMBERS 255
-#define MAX_PORTS 65536
-#define MIN_PORTS 1
 
 struct psd_tcp {
 	struct in_addr src;
@@ -261,15 +273,6 @@ typedef struct kWorker
 } Worker;
 
 
-//-----------  variables for multi-threading---------------//
-#define MAX_WORKERS 5
-#define NO_WORKERS 0
-#define JOB_START_INDEX 0
-#define JOB_END_INDEX 1
-#define JOB_CURRENT_INDEX 2
-#define NO_JOB -99
-#define NOT_STARTED -1
-//--------------------------------------------------------//
 
 
 
