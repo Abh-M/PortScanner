@@ -504,6 +504,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         else if(!isv6)//if v4
         {
             struct ip *iph = (struct ip*)(recPakcet+14);
+            cout<<"\nOuter Ip Header :";
             logIpHeader(iph);
             
             unsigned int proto = (unsigned)iph->ip_p;
@@ -511,12 +512,15 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
             {
                 if(proto==IPPROTO_ICMP )
                 {
-                    //cout<<"\n Protocol Number "<<req.protocolNumber<<endl;
+                    
+
                     struct icmp *icmpHdr = (struct icmp*)(recPakcet  + 20 + 14);
+                    cout<<"\n ICMP header";
+                    logICMPHeader(icmpHdr);
+
                     //check if reply is echo reply
                     if( (unsigned int)icmpHdr->icmp_type == 0 && (unsigned int)icmpHdr->icmp_code == 0)
                     {
-                        logICMPHeader(icmpHdr);
                         result.icmp_code = (unsigned int)icmpHdr->icmp_code;
                         result.icmp_type = (unsigned int)icmpHdr->icmp_type;
                         result.protocolSupported = true;
@@ -525,11 +529,12 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
                     {
                         //analyze icmp payload
                         struct ip *p =(struct ip*)(recPakcet+14+20+8);
+                        cout<<"\n Inner Ip Header";
                         logIpHeader(p);
                         cout<<"\n......"<<(unsigned short)p->ip_id;
                         if( ((unsigned short)p->ip_id) == ip_id)
                         {
-                            logICMPHeader(icmpHdr);
+                            cout<<"\n valid inner ip header";
                             logIpHeader(p);
                             result.icmp_code = (unsigned int)icmpHdr->icmp_code;
                             result.icmp_type = (unsigned int)icmpHdr->icmp_type;
@@ -1314,7 +1319,7 @@ void printScanResultForPort(AllScanResultForPort kResult, const char *ip)
 
 void printProtocolScanResult(ProtocolScanResult kResult)
 {
-    cout<<endl<<"-----------------------------------------"<<endl;
+    //cout<<endl<<"-----------------------------------------"<<endl;
     cout<<"\nProtocol Number : "<<kResult.protocolNumber;
     if(kResult.icmp_type != INVALID_TYPE && kResult.icmp_code != INVALID_CODE)
         cout<<"\n ICMP type: "<<kResult.icmp_type<<" code :"<<kResult.icmp_code;
@@ -1322,7 +1327,7 @@ void printProtocolScanResult(ProtocolScanResult kResult)
         cout<<" : Protocol  Supported";
     else
         cout<<" : Protocol Not Supported";
-    cout<<endl<<"\n-----------------------------------------"<<endl;
+    //cout<<endl<<"\n-----------------------------------------"<<endl;
     
     
 }
