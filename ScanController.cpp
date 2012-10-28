@@ -939,8 +939,11 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     int ip_id = rand()%100+1;
     int sd;
     u_char *packet;
-//    packet = (u_char *)malloc(60);
-    packet = (u_char *)malloc(20);
+    if(isv6)
+	 packet = (u_char *)malloc(20);
+     else
+	 packet = (u_char *)malloc(60);
+
 
     
     //create socket and set options
