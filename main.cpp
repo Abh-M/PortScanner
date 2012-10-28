@@ -243,17 +243,19 @@ int main(int argc, const char * argv[])
     
     
     
-//    ScanRequest newReq;
-//    newReq.srcPort = 5678;
-//    newReq.destPort = 80;
-//    newReq.scanType = SYN_SCAN;
+    ScanRequest newReq;
+    newReq.srcPort = 5678;
+    newReq.destPort = 80;
+    newReq.scanType = SYN_SCAN;
+    newReq.destIp="140.182.277.77";
+    newReq.sourceIp = con->hostDevAndIp.ip;
 ////    newReq.destIp = "::1";
 //    newReq.destIp = "2607:f8b0:400c:c01::69";
-//    con->runTCPscan(newReq);
+    con->runTCPscan(newReq);
     
 //    2001:4860:4860::8888
     //2001:18e8:2:28a6:462a:60ff:fef3:c6ae
-    ScanRequest udpScanReq;// = createScanRequestFor(5678, 53, con->hostDevAndIp.ip, "8.8.8.8",UDP_SCAN);
+//    ScanRequest udpScanReq;// = createScanRequestFor(5678, 53, con->hostDevAndIp.ip, "8.8.8.8",UDP_SCAN);
 //    udpScanReq.destIp = "8.8.8.8";
 //        udpScanReq.destIp = "129.79.246.79";
 //    udpScanReq.sourceIp = con->hostDevAndIp.ip;
@@ -272,22 +274,22 @@ int main(int argc, const char * argv[])
 //    udpScanReq.srcPort = 5678;
 //        udpScanReq.destPort = 45;
 //    ScanResult udpScanResultForPort = con->runUDPScan(udpScanReq);
-    ProtocolScanRequest req;
-    req.srcPort = 5678;
-    req.desPort = 45;
-    req.sourceIp = con->hostDevAndIp.ip;
-        req.sourceIp = "2001:18e8:2:28a6:354a:d9cc:2b81:d47a";
+//    ProtocolScanRequest req;
+//    req.srcPort = 5678;
+//    req.desPort = 45;
+//    req.sourceIp = con->hostDevAndIp.ip;
+//        req.sourceIp = "2001:18e8:2:28a6:354a:d9cc:2b81:d47a";
 //    req.destIp = "140.182.147.5";
 //        req.destIp = "127.0.0.1";
-    req.destIp="fe80::222:fbff:fe19:fb8e";
+//    req.destIp="fe80::222:fbff:fe19:fb8e";
 //    req.destIp = "2607:f8b0:400c:c01::69";
 //        req.destIp = "2001:4860:4860::8844";
 //    for(int i=0;i<=255;i++)
 //    {
 //        cout<<"\n---------------------------\n";
-        req.protocolNumber = 213;
-        con->runScanForProtocol(req);
-        cout<<"\n---------------------------\n";
+//        req.protocolNumber = 213;
+//        con->runScanForProtocol(req);
+//        cout<<"\n---------------------------\n";
         
 //    }
 

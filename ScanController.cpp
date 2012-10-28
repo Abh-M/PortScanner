@@ -28,7 +28,7 @@ using namespace std;
 
 
 
-Job allJobs[10*MAX_PORTS+10*MAX_PROTOCOL_NUMBERS];
+Job allJobs[10];
 sem_t mutex_allJobs;
 int totalJobs=0;
 sem_t mutex_totalJobs;
