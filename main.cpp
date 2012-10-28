@@ -251,7 +251,8 @@ int main(int argc, const char * argv[])
     newReq.sourceIp = con->hostDevAndIp.ip;
 ////    newReq.destIp = "::1";
 //    newReq.destIp = "2607:f8b0:400c:c01::69";
-    con->runTCPscan(newReq);
+    ScanResult res = con->runTCPscan(newReq);
+    cout<<getStringForPortState(res.tcp_portState);
     
 //    2001:4860:4860::8888
     //2001:18e8:2:28a6:462a:60ff:fef3:c6ae
