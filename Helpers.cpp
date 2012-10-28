@@ -76,6 +76,8 @@ unsigned short in_cksum_udp(int src, int dst, unsigned short *addr, int len)
 
 void logIpHeader2(struct ip kIpHdr)
 {
+
+//comment
     
     char des[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(kIpHdr.ip_dst), des, INET_ADDRSTRLEN);
