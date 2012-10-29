@@ -49,6 +49,7 @@ pthread_mutex_t k_request_mutex;
 pthread_mutex_t k_nextJob_mutex;
 void submitJob(Job kJob);
 void printProtocolScanResult(ProtocolScanResult kResult);
+void printResult();
 
 
 
@@ -312,7 +313,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     struct bpf_program fp;
     
-    char filter_exp[100];
+    char filter_exp[256];
     if(isv6)
     {
         sprintf(filter_exp,"icmp6 && src host %s",req.destIp);
@@ -599,7 +600,7 @@ void ScanController::populateProtocolNumberToScan()
     
     //by default scan protocol number from 0-255
     this->totalProtocolsToScan = 0;
-    for(int i=0;i<50;i++)
+    for(int i=0;i<0;i++)
     {
         this->protocolNumbersToScan[i]=i+1;
         this->totalProtocolsToScan++;
@@ -947,7 +948,23 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     pcap_t *handle;
     struct bpf_program fp;
     char filter_exp[256];
-    sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
+//    if(islhost)
+//    {
+//        if(isv6)
+//            sprintf(filter_exp,"(icmp6 && src host %s) || (src host %s && tcp dst port 5678)",kRequest.destIp,kRequest.destIp);
+//        else
+//            sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
+//        
+//    }
+//    else{
+    
+        if(isv6)
+            sprintf(filter_exp,"(icmp6 && src host %s) || (src host %s && tcp dst port %d)",kRequest.destIp,kRequest.destIp,kRequest.srcPort);
+        else
+            sprintf(filter_exp,"(icmp && src host %s) || (src host %s)",kRequest.destIp,kRequest.destIp);
+        
+//    }
+//    sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
     
     bpf_u_int32 mask;
     bpf_u_int32 net;
@@ -1093,16 +1110,16 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     
     //TODO: command line arg for timeout and set default value according to trial and error
-    //    time_t start, end;
-    //    double diff=0;
-    //    time(&start);
-    //    while (1) {
-    //        time(&end);
-    //        diff = difftime(end, start);
-    //        //cout<<"\n..."<<diff;
-    //        if(diff>=5.0)
-    //            break;
-    //    }
+    time_t start, end;
+    double diff=0;
+    time(&start);
+    while (1) {
+        time(&end);
+        diff = difftime(end, start);
+        //cout<<"\n..."<<diff;
+        if(diff>=5.0)
+            break;
+    }
     
     
     
@@ -1121,13 +1138,13 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         {
             struct ip6_hdr *v6hdr;
             v6hdr = (struct ip6_hdr*)(recPakcet+eth_fr_size);
-            if((v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP))
+            if(v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
             {
                 isTcp = true;
                 isIcmp = false;
                 isicmp6 = false;
             }
-            else if((v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP))
+            else if(v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
             {
                 isTcp = false;
                 isIcmp = false;
@@ -1223,13 +1240,10 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             //check if captured icmp is valid
             //TODO:: remove hardcoded values for header lengths
             struct icmp *icmph = (struct icmp*)(recPakcet + eth_fr_size + ip_hdr_size);
-            //            cout<<endl<<"-";
             logICMPHeader(icmph);
             struct ip *inner_ip = (struct ip*)(recPakcet+eth_fr_size+ip_hdr_size+8);
-            //            cout<<endl<<"--";
             logIpHeader(inner_ip);
             struct tcphdr *inner_tcp  = (struct tcphdr*)(recPakcet + eth_fr_size + ip_hdr_size + 28);
-            //            cout<<endl<<"---";
             logTCPHeader(inner_tcp);
             int inner_seq = ntohl(inner_tcp->th_seq);
             if(inner_seq == tcp_seq)
@@ -1254,6 +1268,29 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
                             status.tcp_portState = kFiltered;
                     }
                         break;
+                        
+                    case FIN_SCAN:
+                    {
+                        if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
+                            status.tcp_portState = kFiltered;
+                    }
+                        break;
+                        
+                    case NULL_SCAN:
+                    {
+                        if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
+                            status.tcp_portState = kFiltered;
+                    }
+                        break;
+                    case XMAS_SCAN:
+                    {
+                        if(type==3 && (code==1 || code==2 || code==3 || code==9 || code==10 || code==13))
+                            status.tcp_portState = kFiltered;
+                    }
+                        break;
+
+
+
                         
                     default:
                         break;
@@ -1923,7 +1960,7 @@ void ScanController::scanPortsWithThread()
     
     void *result;
     
-    for(int i=0; i<MAX_WORKERS;i++)
+    for(int i=0; i<this->totalWorkers;i++)
     {
         //        pthread_join(allWorkerThreads[i], &result);
         pthread_join(allWorkerThreadId[i], &result);
@@ -1936,4 +1973,26 @@ void ScanController::scanPortsWithThread()
     pthread_mutex_destroy(&k_nextJob_mutex);
     cout<<"\nALl Done";
     
+    
+    printResult();
+}
+
+
+
+void printResult()
+{
+    for(int i=0; i<totalJobs ; i++)
+    {
+        Job kJob = jobQueue[i];
+        cout<<"\n--------------------- JOB RESULT : "<<kJob.jobId<<"---------------------------------------\n";
+        if(kJob.type == kPortScan)
+            printScanResultForPort(kJob.result,kJob.desIp);
+        else if(kJob.type == kProtocolScan)
+            printProtocolScanResult(kJob.protocolScanResult);
+        cout<<"\n----------------------END------------------------------------\n\n\n";
+        pthread_mutex_unlock(&kMutex);
+        
+
+
+    }
 }

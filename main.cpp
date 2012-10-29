@@ -302,6 +302,7 @@ int main(int argc, const char * argv[])
 con->populateIpAddressToScan(allIPaddress);
 //FIX: hack for v6 localhost
 //con->sourceIP = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
+//    con->sourceIP = "::1";
 cout<<"\n Total Ip address"<<allIPaddress.size();
 //////con->setTargetIPAddress(DEST_IP);
 con->spawnThreads=true;
