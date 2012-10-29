@@ -616,7 +616,7 @@ void ScanController::startScan()
     {
         
         //FIX: change this to change the number of workers
-        this->totalWorkers = 3;//MAX_WORKERS;
+        // this->totalWorkers = 3;//MAX_WORKERS;
         jobDistribution.resize(this->totalWorkers);
         for (int i=0; i<this->totalWorkers; i++) {
             jobDistribution[i].resize(3);
@@ -926,7 +926,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     status.srcIp = kRequest.sourceIp;
     status.destIp = kRequest.destIp;
     status.tcp_portState = kUnkown;
-
+    
     
     //TODO: run ipv6 scan for and implementation of icmp6
     
@@ -952,23 +952,23 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     pcap_t *handle;
     struct bpf_program fp;
     char filter_exp[256];
-//    if(islhost)
-//    {
-//        if(isv6)
-//            sprintf(filter_exp,"(icmp6 && src host %s) || (src host %s && tcp dst port 5678)",kRequest.destIp,kRequest.destIp);
-//        else
-//            sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
-//        
-//    }
-//    else{
+    //    if(islhost)
+    //    {
+    //        if(isv6)
+    //            sprintf(filter_exp,"(icmp6 && src host %s) || (src host %s && tcp dst port 5678)",kRequest.destIp,kRequest.destIp);
+    //        else
+    //            sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
+    //
+    //    }
+    //    else{
     
-        if(isv6)
-            sprintf(filter_exp,"(icmp6 && src host %s) || (src host %s && tcp dst port %d)",kRequest.destIp,kRequest.destIp,kRequest.srcPort);
-        else
-            sprintf(filter_exp,"src host %s",kRequest.destIp);
-        
-//    }
-//    sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
+    if(isv6)
+        sprintf(filter_exp,"(icmp6 && src host %s) || (src host %s && tcp dst port %d)",kRequest.destIp,kRequest.destIp,kRequest.srcPort);
+    else
+        sprintf(filter_exp,"src host %s",kRequest.destIp);
+    
+    //    }
+    //    sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
     
     bpf_u_int32 mask;
     bpf_u_int32 net;
@@ -1129,19 +1129,20 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     struct pcap_pkthdr header;
     const u_char *recPakcet = pcap_next(handle, &header);
-
-
+    
+    
     if(recPakcet!=NULL)
     {
         bool isTcp = false;
         bool isIcmp = false;
         bool isicmp6 = false;
         int ip_hdr_size = 0;
-        
+        struct ip *iph;
+        struct ip6_hdr *v6hdr;
         
         if(isv6)
         {
-            struct ip6_hdr *v6hdr;
+
             v6hdr = (struct ip6_hdr*)(recPakcet+eth_fr_size);
             if(v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
             {
@@ -1165,22 +1166,27 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             //logIpHeader(iph);
             
             
-            struct ip *iph = (struct ip*)(recPakcet + eth_fr_size);
+            iph = (struct ip*)(recPakcet + eth_fr_size);
             isTcp = ((unsigned int)iph->ip_p == IPPROTO_TCP);
             isIcmp = ((unsigned int)iph->ip_p == IPPROTO_ICMP);
             ip_hdr_size = sizeof(struct ip);
-            logIpHeader(iph);
             
         }
         if(isTcp)
         {
             //TODO : hardcode value of will change is this is ipv6
             struct tcphdr *tcpHdr = (struct tcphdr*)(recPakcet + ip_hdr_size +eth_fr_size);
-            logTCPHeader(tcpHdr);
             //check whether response is valid by comparing seq numbers and ack numbers
             unsigned long int ack = ntohl(tcpHdr->th_ack);
             if(ack==tcp_seq+1)
             {
+                if(isv6)
+                    logIP6Header(v6hdr);
+                else
+                    logIpHeader(iph);
+                
+                logTCPHeader(tcpHdr);
+                
                 //logTCPHeader(tcpHdr);
                 //check if src and destination ports are valid
                 //get which flags are set in the response
@@ -1236,6 +1242,21 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
                 
                 
             }
+            else
+            {
+                if(kRequest.scanType==XMAS_SCAN)
+                    status.tcp_portState = kOpen;
+                if(kRequest.scanType == NULL_SCAN)
+                    status.tcp_portState = kOpen;
+                if(kRequest.scanType == FIN_SCAN)
+                    status.tcp_portState = kOpen;
+                if(kRequest.scanType == SYN_SCAN)
+                    status.tcp_portState = kFiltered;
+                if(kRequest.scanType == ACK_SCAN)
+                    status.tcp_portState = kFiltered;
+                
+            }
+            
             
             
         }
@@ -1295,20 +1316,36 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
                             status.tcp_portState = kFiltered;
                     }
                         break;
-
-
-
+                        
+                        
+                        
                         
                     default:
                         break;
                 }
                 
             }
+            else
+            {
+                if(kRequest.scanType==XMAS_SCAN)
+                    status.tcp_portState = kOpen;
+                if(kRequest.scanType == NULL_SCAN)
+                    status.tcp_portState = kOpen;
+                if(kRequest.scanType == FIN_SCAN)
+                    status.tcp_portState = kOpen;
+                if(kRequest.scanType == SYN_SCAN)
+                    status.tcp_portState = kFiltered;
+                if(kRequest.scanType == ACK_SCAN)
+                    status.tcp_portState = kFiltered;
+                
+            }
+            
             
         }
         else if(isicmp6 == true)
         {
             //FIX:add icmp6 processing
+            cout<<"\n GOT ICMP6 TCP SCAN";
         }
         else
         {
@@ -1341,7 +1378,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         
     }
     pthread_mutex_unlock(&k_tcp_scan_result_mutex);
-
+    
     //close socket
     close(sd);
     //close pcap session
@@ -2015,7 +2052,7 @@ void printResult()
         cout<<"\n----------------------END------------------------------------\n\n\n";
         pthread_mutex_unlock(&kMutex);
         
-
-
+        
+        
     }
 }

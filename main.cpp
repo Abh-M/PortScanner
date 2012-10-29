@@ -148,7 +148,17 @@ int main(int argc, const char * argv[])
 		{
             //enable multithreading
 			con->spawnThreads = true;
+            con->totalWorkers = MIN_WORKERS;
 			cout<<"Speedup="<<con->spawnThreads;
+            strtok((char *)param, valueSeperator);
+            char* threadsCount = strtok((char *)NULL, valueSeperator);
+            if(threadsCount!=NULL)
+            {
+                
+                con->totalWorkers = atoi(threadsCount);
+            }
+
+            
 		}
 		if((strstr(param, ARG_SCAN))!=NULL)
 		{
@@ -305,7 +315,7 @@ int main(int argc, const char * argv[])
     //    con->sourceIP = "::1";
     cout<<"\n Total Ip address"<<allIPaddress.size();
     //////con->setTargetIPAddress(DEST_IP);
-    con->spawnThreads=true;
+//    con->spawnThreads=true;
     
     time_t start, end;
     double diff=0;

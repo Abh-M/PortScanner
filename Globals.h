@@ -72,6 +72,7 @@
 
 
 //-----------  variables for multi-threading---------------//
+#define MIN_WORKERS 5
 #define MAX_WORKERS 5
 #define NO_WORKERS 0
 #define JOB_START_INDEX 0
