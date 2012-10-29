@@ -63,7 +63,8 @@ public:
     int totalIpAddressToScan;
 
     
-    
+//    vector<vector<int> > jobDistribution;
+//    vector<Job> jobQueue;
 #pragma mark - methods
     
 	ScanController();

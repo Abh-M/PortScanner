@@ -304,7 +304,7 @@ con->populateIpAddressToScan(allIPaddress);
 //con->sourceIP = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
 cout<<"\n Total Ip address"<<allIPaddress.size();
 //////con->setTargetIPAddress(DEST_IP);
-con->spawnThreads=false;
+con->spawnThreads=true;
 con->startScan();
 //    
 //    

@@ -26,18 +26,22 @@
 #include "Utils.h"
 using namespace std;
 
+vector<vector<int> > jobDistribution;
+vector<Job> jobQueue;
 
 
-Job allJobs[MAX_JOBS];
+//Job allJobs[MAX_JOBS];
 sem_t mutex_allJobs;
 int totalJobs=0;
 sem_t mutex_totalJobs;
 int currentJob;
 sem_t mutex_currJob;
-Worker workers[MAX_WORKERS];
-int workDistribution[MAX_WORKERS][3];
+//Worker workers[MAX_WORKERS];
+//int workDistribution[MAX_WORKERS][3];
 sem_t mutex_wrkD;
-pthread_t allWorkerThreads[MAX_WORKERS];
+
+vector<pthread_t> allWorkerThreadId;
+//pthread_t allWorkerThreads[MAX_WORKERS];
 //sem_t kMutex;
 pthread_mutex_t kMutex;
 pthread_mutex_t k_syn_mutex;
@@ -284,7 +288,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     
     bool isv6 = isIpV6(req.destIp);
-	    
+    
     
     
     char *dev, errBuff[50];
@@ -513,11 +517,11 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
                 if(proto==IPPROTO_ICMP )
                 {
                     
-
+                    
                     struct icmp *icmpHdr = (struct icmp*)(recPakcet  + 20 + 14);
                     cout<<"\n ICMP header";
                     logICMPHeader(icmpHdr);
-
+                    
                     //check if reply is echo reply
                     if( (unsigned int)icmpHdr->icmp_type == 0 && (unsigned int)icmpHdr->icmp_code == 0)
                     {
@@ -608,7 +612,13 @@ void ScanController::startScan()
     //route according to spawn threads flag
     if(this->spawnThreads==true)
     {
-        this->totalWorkers = MAX_WORKERS;
+        
+        //FIX: change this to change the number of workers
+        this->totalWorkers = 3;//MAX_WORKERS;
+        jobDistribution.resize(this->totalWorkers);
+        for (int i=0; i<this->totalWorkers; i++) {
+            jobDistribution[i].resize(3);
+        }
         setUpJobsAndJobDistribution();
         scanPortsWithThread();
         
@@ -1339,7 +1349,7 @@ void printProtocolScanResult(ProtocolScanResult kResult)
             cout<<"\n TCP PROTO SCAN PORT:"<<res.portNo<<" | "<<getStringForPortState(res.synState);
             
         }
-
+        
     }
     else
     {
@@ -1350,7 +1360,7 @@ void printProtocolScanResult(ProtocolScanResult kResult)
             cout<<" : Protocol  Supported";
         else
             cout<<" : Protocol Not Supported";
-
+        
         
     }
     //cout<<endl<<"\n-----------------------------------------"<<endl;
@@ -1369,7 +1379,8 @@ void ScanController::scanPorts()
     
     for(int index=0;index<totalJobs;index++)
     {
-        Job nextJob = allJobs[index];
+        //        Job nextJob = allJobs[index];
+        Job nextJob = jobQueue[index];
         
         //if job is port scan
         if(nextJob.type == kPortScan)
@@ -1441,7 +1452,7 @@ void ScanController::scanPorts()
                 //                tcpScanResult.totalPortsScannedForProtocol = nextJob.totalPortsForProtocolScan;
                 nextJob.protocolScanResult.totalPortsScannedForProtocol =  nextJob.totalPortsForProtocolScan;
                 nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
-
+                
                 for(int index = 0;index<nextJob.totalPortsForProtocolScan;index++)
                 {
                     //for all ports do all types of tcp scan;
@@ -1455,11 +1466,11 @@ void ScanController::scanPorts()
                     ScanResult synResult = sharedInstance->runTCPscan(synRequest);
                     allScanTypeResultForPort.synState = synResult.tcp_portState;
                     nextJob.protocolScanResult.tcpOrUdpPortScans.tcpProtoPortsScanResult[index]=allScanTypeResultForPort;
-
+                    
                     
                 }
                 submitJob(nextJob);
-
+                
                 
             }
             else if(nextJob.protocolNumber == IPPROTO_UDP)
@@ -1469,7 +1480,7 @@ void ScanController::scanPorts()
                 //                udpScanResult.totalPortsScannedForProtocol = nextJob.totalPortsForProtocolScan;
                 nextJob.protocolScanResult.totalPortsScannedForProtocol =  nextJob.totalPortsForProtocolScan;
                 nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
-//                nextJob.protocolScanResult.tcpOrUdpPortScans.
+                //                nextJob.protocolScanResult.tcpOrUdpPortScans.
                 for(int index=0;index<nextJob.totalPortsForProtocolScan;index++)
                 {
                     
@@ -1483,10 +1494,10 @@ void ScanController::scanPorts()
                     
                     
                     nextJob.protocolScanResult.tcpOrUdpPortScans.udpPortsScanResult[index]=scanResultForUDPport;
-
+                    
                 }
                 submitJob(nextJob);
-
+                
                 
             }
             else if(nextJob.protocolNumber <= IPPROTO_MAX && nextJob.protocolNumber!=IPPROTO_TCP && nextJob.protocolNumber!=IPPROTO_UDP)//for other protocols including ICMP
@@ -1501,7 +1512,7 @@ void ScanController::scanPorts()
                 ProtocolScanResult protoScanResult = runScanForProtocol(protoScanReq);
                 nextJob.protocolScanResult = protoScanResult;
                 submitJob(nextJob);
-
+                
                 
             }
         }
@@ -1532,6 +1543,7 @@ void ScanController::setUpJobsAndJobDistribution()
         const char *nextIp = this->allIpAddressToScan[i].c_str();
         
         totalJobs = totalJobs+this->totalPortsToScan;//+this->totalProtocolsToScan;
+        //this->jobQueue.resize(totalJobs);
         for(int portIndex=0;portIndex<totalPortsToScan;portIndex++)
         {
             int destPort = this->portsToScan[portIndex];
@@ -1550,14 +1562,15 @@ void ScanController::setUpJobsAndJobDistribution()
             newJob.scanTypeToUse[XMAS_SCAN] = this->typeOfScans[XMAS_SCAN];
             newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
             newJob.scanTypeToUse[PROTO_SCAN] = NOT_REQUIRED;
-            allJobs[jobId]=newJob;
+            //allJobs[jobId]=newJob;
+            jobQueue.push_back(newJob);
             jobId++;
             
             
         }
         
         totalJobs = totalJobs + this->totalProtocolsToScan;
-        
+        //this->jobQueue.resize(totalJobs);
         for(int portNoIndex=0;portNoIndex<this->totalProtocolsToScan;portNoIndex++)
         {
             int proto = this->protocolNumbersToScan[portNoIndex];
@@ -1566,7 +1579,7 @@ void ScanController::setUpJobsAndJobDistribution()
             newJob.type = kProtocolScan;
             if(proto == IPPROTO_TCP || proto == IPPROTO_UDP)
             {
-               // memmove(newJob.portsForProtocolScan,this->portsToScan,this->totalPortsToScan);
+                // memmove(newJob.portsForProtocolScan,this->portsToScan,this->totalPortsToScan);
                 memcpy(&newJob.portsForProtocolScan, &this->portsToScan,sizeof(int)*this->totalPortsToScan);
                 newJob.totalPortsForProtocolScan = this->totalPortsToScan;
             }
@@ -1587,7 +1600,8 @@ void ScanController::setUpJobsAndJobDistribution()
             newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
             newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
             newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-            allJobs[jobId]=newJob;
+            //allJobs[jobId]=newJob;
+            jobQueue.push_back(newJob);
             jobId++;
             
         }
@@ -1595,81 +1609,38 @@ void ScanController::setUpJobsAndJobDistribution()
     }
     cout<<"\n Total Jobs"<<totalJobs;
     
-    //    totalJobs = this->totalPortsToScan;
-    //    int jobId = 0;
-    //    for(jobId = 0;jobId<this->totalPortsToScan;jobId++)
-    //    {
-    //
-    //        int destport = this->portsToScan[jobId];
-    //
-    //        Job newJob;
-    //        newJob.jobId = jobId;
-    //        newJob.type = kPortScan;
-    //        newJob.srcPort = SRC_PORT;
-    //        newJob.desPort = destport;
-    //        newJob.srcIp = this->sourceIP;
-    //        newJob.desIp = this->targetIP;
-    //        newJob.scanTypeToUse[SYN_SCAN] = this->typeOfScans[SYN_SCAN];
-    //        newJob.scanTypeToUse[ACK_SCAN] = this->typeOfScans[ACK_SCAN];
-    //        newJob.scanTypeToUse[FIN_SCAN] = this->typeOfScans[FIN_SCAN];
-    //        newJob.scanTypeToUse[NULL_SCAN] = this->typeOfScans[NULL_SCAN];
-    //        newJob.scanTypeToUse[XMAS_SCAN] = this->typeOfScans[XMAS_SCAN];
-    //        newJob.scanTypeToUse[UDP_SCAN] = this->typeOfScans[UDP_SCAN];
-    //        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-    //
-    //        allJobs[jobId]=newJob;
-    //
-    //    }
-    //    cout<<"\n>>>>>>>>>"<<jobId;
-    //    cout<<"\n-------->>>"<<this->totalProtocolsToScan;
-    //    totalJobs = totalJobs + this->totalProtocolsToScan;
-    //    for(int index = 0;index<this->totalProtocolsToScan;index++)
-    //    {
-    //        int protocolNumber = this->protocolNumbersToScan[index];
-    //        Job newJob;
-    //        newJob.jobId = jobId;
-    //        newJob.type = kProtocolScan;
-    //        newJob.srcPort = NOT_REQUIRED;
-    //        newJob.desPort = NOT_REQUIRED;
-    //        newJob.srcIp = this->sourceIP;
-    //        newJob.desIp = this->targetIP;
-    //        newJob.protocolNumber = protocolNumber;
-    //
-    //        newJob.scanTypeToUse[SYN_SCAN] = NOT_REQUIRED;
-    //        newJob.scanTypeToUse[ACK_SCAN] = NOT_REQUIRED;
-    //        newJob.scanTypeToUse[FIN_SCAN] = NOT_REQUIRED;
-    //        newJob.scanTypeToUse[NULL_SCAN] = NOT_REQUIRED;
-    //        newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
-    //        newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
-    //        newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-    //
-    //        allJobs[jobId]=newJob;
-    //        jobId++;
-    //    }
     
     if(this->totalWorkers>NO_WORKERS)
     {
         //distribute work if number of workers is greater than zero
-        int jobsPerWorker = totalJobs/MAX_WORKERS;
+        // int jobsPerWorker = totalJobs/MAX_WORKERS;
+        int jobsPerWorker = totalJobs/this->totalWorkers;
         int temp_totalJobs = totalJobs;
-        for (int workerId =0; workerId<MAX_WORKERS; workerId++) {
+        
+        for (int workerId =0; workerId<this->totalWorkers; workerId++) {
             Worker newWorker;
             newWorker.workerId = workerId;
             
             int startindex = workerId*jobsPerWorker;
             int endindex=-1;
-            if(workerId==(MAX_WORKERS-1))//last worker check  remaining jobs
+            
+            if(workerId==(this->totalWorkers-1))//last worker check  remaining jobs
             {
                 endindex = totalJobs-1;
                 temp_totalJobs = temp_totalJobs - temp_totalJobs;
             }
-            else{
+            else
+            {
                 endindex = startindex + jobsPerWorker-1;
                 temp_totalJobs = temp_totalJobs - jobsPerWorker;
             }
-            workDistribution[workerId][JOB_START_INDEX] = startindex;
-            workDistribution[workerId][JOB_END_INDEX] =  endindex;
-            workDistribution[workerId][JOB_CURRENT_INDEX] = NOT_STARTED;
+            
+            jobDistribution[workerId][JOB_START_INDEX] = startindex;
+            jobDistribution[workerId][JOB_END_INDEX] = endindex;
+            jobDistribution[workerId][JOB_CURRENT_INDEX] = NOT_STARTED;
+            //            workDistribution[workerId][JOB_START_INDEX] = startindex;
+            //            workDistribution[workerId][JOB_END_INDEX] =  endindex;
+            //            workDistribution[workerId][JOB_CURRENT_INDEX] = NOT_STARTED;
         }
         
         
@@ -1681,46 +1652,49 @@ void ScanController::setUpJobsAndJobDistribution()
 }
 
 
-Job* getBonusJobForWorker(int kWorkerId)
-{
-    Job nJob;
-    Job *nextJob = NULL;
-    for(int wkr=0;wkr<MAX_WORKERS;wkr++)
-    {
-        if(kWorkerId!=wkr)
-            //look for pending jobs of other workers
-        {
-            int currJob = workDistribution[wkr][JOB_CURRENT_INDEX];
-            int startJob = workDistribution[wkr][JOB_START_INDEX];
-            int endJob = workDistribution[wkr][JOB_END_INDEX];
-            if(currJob<endJob)
-            {
-                if(currJob==-1)
-                    currJob = startJob;
-                else
-                    currJob++;
-                nJob = allJobs[currJob];
-                nextJob = &nJob;
-                workDistribution[wkr][JOB_CURRENT_INDEX] = currJob;
-                break;
-            }
-        }
-    }
-    return nextJob;
-    
-}
+//Job getBonusJobForWorker(int kWorkerId)
+//{
+//    Job nJob;
+//    Job *nextJob = NULL;
+//    for(int wkr=0;wkr<MAX_WORKERS;wkr++)
+//    {
+//        if(kWorkerId!=wkr)
+//            //look for pending jobs of other workers
+//        {
+//            int currJob = workDistribution[wkr][JOB_CURRENT_INDEX];
+//            int startJob = workDistribution[wkr][JOB_START_INDEX];
+//            int endJob = workDistribution[wkr][JOB_END_INDEX];
+//            if(currJob<endJob)
+//            {
+//                if(currJob==-1)
+//                    currJob = startJob;
+//                else
+//                    currJob++;
+//                nJob = allJobs[currJob];
+//                //nextJob = &nJob;
+//                workDistribution[wkr][JOB_CURRENT_INDEX] = currJob;
+//                break;
+//            }
+//        }
+//    }
+//    return nJob;
+//
+//}
 
 
 Job  ScanController::getNextJob(int kWorkerId)
 {
     Job nJob;
-    Job *nextJob = NULL;
     
     pthread_mutex_lock(&kMutex);
     
-    int curretJob = workDistribution[kWorkerId][JOB_CURRENT_INDEX];
-    int startJob = workDistribution[kWorkerId][JOB_START_INDEX];
-    int endJob = workDistribution[kWorkerId][JOB_END_INDEX];
+    //    int curretJob = workDistribution[kWorkerId][JOB_CURRENT_INDEX];
+    //    int startJob = workDistribution[kWorkerId][JOB_START_INDEX];
+    //    int endJob = workDistribution[kWorkerId][JOB_END_INDEX];
+    int curretJob = jobDistribution[kWorkerId][JOB_CURRENT_INDEX];
+    int startJob = jobDistribution[kWorkerId][JOB_START_INDEX];
+    int endJob = jobDistribution[kWorkerId][JOB_END_INDEX];
+    
     
     //when this is the first job
     if(!(curretJob == endJob))
@@ -1730,8 +1704,10 @@ Job  ScanController::getNextJob(int kWorkerId)
         else
             curretJob++;
         
-        workDistribution[kWorkerId][JOB_CURRENT_INDEX] = curretJob;
-        nJob = allJobs[curretJob];
+        //        workDistribution[kWorkerId][JOB_CURRENT_INDEX] = curretJob;
+        jobDistribution[kWorkerId][JOB_CURRENT_INDEX] = curretJob;
+        //        nJob = allJobs[curretJob];
+        nJob = jobQueue[curretJob];
         //nextJob = &nJob;
         
     }
@@ -1754,7 +1730,8 @@ void submitJob(Job kJob)
     pthread_mutex_lock(&kMutex);
     cout<<"\n--------------------- START---------------------------------------\n";
     cout<<"Submitting Job "<<kJob.jobId;
-    allJobs[kJob.jobId]=kJob;
+    //    allJobs[kJob.jobId]=kJob;
+    jobQueue[kJob.jobId]=kJob;
     if(kJob.type == kPortScan)
         printScanResultForPort(kJob.result,kJob.desIp);
     else if(kJob.type == kProtocolScan)
@@ -1847,6 +1824,79 @@ void* handleJob(void *arg)
                 submitJob(nextJob);
                 //Job is complete submit the job
             }
+            else if(nextJob.type == kProtocolScan )
+            {
+                if(nextJob.protocolNumber == IPPROTO_TCP)
+                {
+                    //For all ports gather scanresult for all types of scan
+                    //                ProtocolScanResult tcpScanResult;
+                    //                tcpScanResult.totalPortsScannedForProtocol = nextJob.totalPortsForProtocolScan;
+                    nextJob.protocolScanResult.totalPortsScannedForProtocol =  nextJob.totalPortsForProtocolScan;
+                    nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
+                    
+                    for(int index = 0;index<nextJob.totalPortsForProtocolScan;index++)
+                    {
+                        //for all ports do all types of tcp scan;
+                        int portNo = nextJob.portsForProtocolScan[index];
+                        AllScanResult allScanTypeResultForPort;
+                        allScanTypeResultForPort.portNo = portNo;
+                        
+                        //FIX: only SYN scan for port is done
+                        //TODO: other types of scans needs to be done;
+                        ScanRequest synRequest = createScanRequestFor(nextJob.srcPort, portNo, nextJob.srcIp, nextJob.desIp,SYN_SCAN);
+                        ScanResult synResult = sharedInstance->runTCPscan(synRequest);
+                        allScanTypeResultForPort.synState = synResult.tcp_portState;
+                        nextJob.protocolScanResult.tcpOrUdpPortScans.tcpProtoPortsScanResult[index]=allScanTypeResultForPort;
+                        
+                        
+                    }
+                    submitJob(nextJob);
+                    
+                    
+                }
+                else if(nextJob.protocolNumber == IPPROTO_UDP)
+                {
+                    //For all ports gather result for UDP scan result
+                    //                ProtocolScanResult  udpScanResult;
+                    //                udpScanResult.totalPortsScannedForProtocol = nextJob.totalPortsForProtocolScan;
+                    nextJob.protocolScanResult.totalPortsScannedForProtocol =  nextJob.totalPortsForProtocolScan;
+                    nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
+                    //                nextJob.protocolScanResult.tcpOrUdpPortScans.
+                    for(int index=0;index<nextJob.totalPortsForProtocolScan;index++)
+                    {
+                        
+                        int portNo = nextJob.portsForProtocolScan[index];
+                        AllScanResult scanResultForUDPport;
+                        scanResultForUDPport.portNo = portNo;
+                        
+                        ScanRequest udpScanReq = createScanRequestFor(nextJob.srcPort, portNo, nextJob.srcIp, nextJob.desIp,UDP_SCAN);
+                        ScanResult udpScanResultForPort = sharedInstance->runUDPScan(udpScanReq);
+                        scanResultForUDPport.udpState = udpScanResultForPort.udp_portState;
+                        
+                        
+                        nextJob.protocolScanResult.tcpOrUdpPortScans.udpPortsScanResult[index]=scanResultForUDPport;
+                        
+                    }
+                    submitJob(nextJob);
+                    
+                    
+                }
+                else if(nextJob.protocolNumber <= IPPROTO_MAX && nextJob.protocolNumber!=IPPROTO_TCP && nextJob.protocolNumber!=IPPROTO_UDP)//for other protocols including ICMP
+                {
+                    //not port is involved
+                    nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
+                    ProtocolScanRequest protoScanReq;
+                    protoScanReq.protocolNumber = nextJob.protocolNumber;
+                    protoScanReq.srcPort = nextJob.srcPort;
+                    protoScanReq.sourceIp = nextJob.srcIp;
+                    protoScanReq.destIp = nextJob.desIp;
+                    ProtocolScanResult protoScanResult = sharedInstance->runScanForProtocol(protoScanReq);
+                    nextJob.protocolScanResult = protoScanResult;
+                    submitJob(nextJob);
+                    
+                    
+                }
+            }
         }
         
         
@@ -1862,10 +1912,12 @@ void ScanController::scanPortsWithThread()
     pthread_mutex_init(&k_request_mutex, NULL);
     pthread_mutex_init(&k_syn_mutex, NULL);
     pthread_mutex_init(&k_nextJob_mutex, NULL);
-    int j[MAX_WORKERS];
-    for (int i=0; i<MAX_WORKERS; i++) {
+    int j[this->totalWorkers];
+    for (int i=0; i<this->totalWorkers; i++) {
         j[i] = i;
-        pthread_create(&allWorkerThreads[i], NULL, handleJob, (void*)&j[i]);
+        //        pthread_create(&allWorkerThreads[i], NULL, handleJob, (void*)&j[i]);
+        allWorkerThreadId.resize(i+1);
+        pthread_create(&allWorkerThreadId[i], NULL, handleJob, (void*)&j[i]);
         
     }
     
@@ -1873,7 +1925,8 @@ void ScanController::scanPortsWithThread()
     
     for(int i=0; i<MAX_WORKERS;i++)
     {
-        pthread_join(allWorkerThreads[i], &result);
+        //        pthread_join(allWorkerThreads[i], &result);
+        pthread_join(allWorkerThreadId[i], &result);
         //cout<<"\n Exit : "<<*(int *)result;
     }
     
