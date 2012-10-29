@@ -1246,11 +1246,11 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             //check if captured icmp is valid
             //TODO:: remove hardcoded values for header lengths
             struct icmp *icmph = (struct icmp*)(recPakcet + eth_fr_size + ip_hdr_size);
-            logICMPHeader(icmph);
+            //logICMPHeader(icmph);
             struct ip *inner_ip = (struct ip*)(recPakcet+eth_fr_size+ip_hdr_size+8);
-            logIpHeader(inner_ip);
+            //logIpHeader(inner_ip);
             struct tcphdr *inner_tcp  = (struct tcphdr*)(recPakcet + eth_fr_size + ip_hdr_size + 28);
-            logTCPHeader(inner_tcp);
+            //logTCPHeader(inner_tcp);
             int inner_seq = ntohl(inner_tcp->th_seq);
             if(inner_seq == tcp_seq)
             {
@@ -1258,6 +1258,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
                 unsigned int code = (unsigned int)icmph->icmp_code;
                 unsigned int type = (unsigned int)icmph->icmp_type;
                 //                cout<<endl<<"----";
+                cout<<"\n Correct ICMP ";
                 logICMPHeader(icmph);
                 switch (kRequest.scanType)
                 {
