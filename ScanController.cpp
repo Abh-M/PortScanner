@@ -967,6 +967,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     else
         sprintf(filter_exp,"src host %s",kRequest.destIp);
     
+        int len1 = strlen(filter_exp);
     //    }
     //    sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
     
@@ -982,6 +983,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     if (handle == NULL) {
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
     }
+    int len = strlen(filter_exp);
     if (pcap_compile(handle, &fp, filter_exp, 0, net) == -1) {
         fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(handle));
     }
