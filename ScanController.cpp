@@ -47,6 +47,7 @@ pthread_mutex_t kMutex;
 pthread_mutex_t k_syn_mutex;
 pthread_mutex_t k_request_mutex;
 pthread_mutex_t k_nextJob_mutex;
+pthread_mutex_t k_tcp_scan_result_mutex;
 void submitJob(Job kJob);
 void printProtocolScanResult(ProtocolScanResult kResult);
 void printResult();
@@ -918,14 +919,17 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
 ScanResult ScanController::runTCPscan(ScanRequest kRequest)
 {
     
-    //TODO: run ipv6 scan for and implementation of icmp6
-    
+    pthread_mutex_lock(&k_tcp_scan_result_mutex);
     ScanResult status;
     status.srcPort = kRequest.srcPort;
     status.destPort = kRequest.destPort;
     status.srcIp = kRequest.sourceIp;
     status.destIp = kRequest.destIp;
     status.tcp_portState = kUnkown;
+
+    
+    //TODO: run ipv6 scan for and implementation of icmp6
+    
     
     
     bool isv6=isIpV6(kRequest.destIp);
@@ -961,7 +965,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         if(isv6)
             sprintf(filter_exp,"(icmp6 && src host %s) || (src host %s && tcp dst port %d)",kRequest.destIp,kRequest.destIp,kRequest.srcPort);
         else
-            sprintf(filter_exp,"(icmp && src host %s) || (src host %s)",kRequest.destIp,kRequest.destIp);
+            sprintf(filter_exp,"(icmp || src host %s)",kRequest.destIp,kRequest.destIp);
         
 //    }
 //    sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
@@ -974,7 +978,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         net = 0;
         mask = 0;
     }
-    handle = pcap_open_live(dev, 65535, 1, 3000, errBuff);
+    handle = pcap_open_live(dev, 65535, 0, 3000, errBuff);
     if (handle == NULL) {
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
     }
@@ -1117,7 +1121,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         time(&end);
         diff = difftime(end, start);
         //cout<<"\n..."<<diff;
-        if(diff>=5.0)
+        if(diff>=3.0)
             break;
     }
     
@@ -1125,9 +1129,10 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     struct pcap_pkthdr header;
     const u_char *recPakcet = pcap_next(handle, &header);
+
+
     if(recPakcet!=NULL)
     {
-        
         bool isTcp = false;
         bool isIcmp = false;
         bool isicmp6 = false;
@@ -1155,7 +1160,8 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             ip_hdr_size = sizeof(struct ip6_hdr);
             logIP6Header(v6hdr);
         }
-        else{
+        else
+        {
             //logIpHeader(iph);
             
             
@@ -1303,7 +1309,20 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         {
             //FIX:add icmp6 processing
         }
-        
+        else
+        {
+            if(kRequest.scanType==XMAS_SCAN)
+                status.tcp_portState = kOpen;
+            if(kRequest.scanType == NULL_SCAN)
+                status.tcp_portState = kOpen;
+            if(kRequest.scanType == FIN_SCAN)
+                status.tcp_portState = kOpen;
+            if(kRequest.scanType == SYN_SCAN)
+                status.tcp_portState = kFiltered;
+            if(kRequest.scanType == ACK_SCAN)
+                status.tcp_portState = kFiltered;
+            
+        }
         
     }
     else if(recPakcet==NULL)
@@ -1320,7 +1339,8 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             status.tcp_portState = kFiltered;
         
     }
-    
+    pthread_mutex_unlock(&k_tcp_scan_result_mutex);
+
     //close socket
     close(sd);
     //close pcap session
@@ -1949,6 +1969,7 @@ void ScanController::scanPortsWithThread()
     pthread_mutex_init(&k_request_mutex, NULL);
     pthread_mutex_init(&k_syn_mutex, NULL);
     pthread_mutex_init(&k_nextJob_mutex, NULL);
+    pthread_mutex_init(&k_tcp_scan_result_mutex, NULL);
     int j[this->totalWorkers];
     for (int i=0; i<this->totalWorkers; i++) {
         j[i] = i;
@@ -1971,6 +1992,7 @@ void ScanController::scanPortsWithThread()
     pthread_mutex_destroy(&k_request_mutex);
     pthread_mutex_destroy(&k_syn_mutex);
     pthread_mutex_destroy(&k_nextJob_mutex);
+    pthread_mutex_destroy(&k_tcp_scan_result_mutex);
     cout<<"\nALl Done";
     
     

@@ -7,7 +7,7 @@
 //
 
 #include "PCH.h"
-#include "ScanController.h" 
+#include "ScanController.h"
 #include "Helpers.h"
 #include "Utils.h"
 
@@ -16,10 +16,10 @@ using namespace std;
 
 int main(int argc, const char * argv[])
 {
-//    char *ipv6 = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
-//    char *mask = "126";
-//    getAllIPV6AddressesInSubnet(ipv6, mask);
-//    return 0;
+    //    char *ipv6 = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
+    //    char *mask = "126";
+    //    getAllIPV6AddressesInSubnet(ipv6, mask);
+    //    return 0;
     
     getMyIpAddress();
     //return 0;
@@ -50,7 +50,7 @@ int main(int argc, const char * argv[])
             char*ipAddress = strtok((char *)NULL, valueSeperator);
             if(ipAddress!=NULL)
             {
-//                vector<string> allIPaddress;
+                //                vector<string> allIPaddress;
                 allIPaddress.push_back(ipAddress);
                 //cout<<"IP Address Entered: "<<ipAddress;
                 //Use ipaddress as required
@@ -137,7 +137,7 @@ int main(int argc, const char * argv[])
 		if((strcmp(param, ARG_FILE))==0)
 		{
 			cout<<"Reading From File!"<<endl;
-			 allIPaddress =  readIPFile("/Users/abhineet/Github/demo/demo/IPAddressList.txt");
+            allIPaddress =  readIPFile("/Users/abhineet/Github/demo/demo/IPAddressList.txt");
             cout<<"Reading From Done!"<<endl;//<<allIPaddress[1];
             const char *ipp =allIPaddress[1].c_str();
             cout<<"\n"<<ipp;
@@ -246,89 +246,96 @@ int main(int argc, const char * argv[])
     
     
     
-//    ScanRequest newReq;
-//    newReq.srcPort = 5678;
-//    newReq.destPort = 80;
-//    newReq.scanType = SYN_SCAN;
-//    newReq.destIp="129.79.246.79";
-//    newReq.sourceIp = con->hostDevAndIp.ip;
-//////    newReq.destIp = "::1";
-////    newReq.destIp = "2607:f8b0:400c:c01::69";
-//    ScanResult res = con->runTCPscan(newReq);
-//    cout<<getStringForPortState(res.tcp_portState);
-//    
-////    2001:4860:4860::8888
-//    //2001:18e8:2:28a6:462a:60ff:fef3:c6ae
-////    ScanRequest udpScanReq;// = createScanRequestFor(5678, 53, con->hostDevAndIp.ip, "8.8.8.8",UDP_SCAN);
-////    udpScanReq.destIp = "8.8.8.8";
-////        udpScanReq.destIp = "129.79.246.79";
-////    udpScanReq.sourceIp = con->hostDevAndIp.ip;
-////    udpScanReq.destIp = "2607:f8b0:400c:c01::69";
-////    udpScanReq.destIp = "2607:f8b0:400c:c01::68";
-////    udpScanReq.sourceIp = "fe80::462a:60ff:fef3:c6ae";
-////    udpScanReq.destIp = "fe80::5054:ff:fefe:23e4";
-////    udpScanReq.sourceIp = "::1";
-//    //    udpScanReq.destIp = "fe80::5054:ff:fefe:23e4";
-////    udpScanReq.destIp = "::1";
-//
-//    
-//        //udpScanReq.sourceIp = "140.182.146.113";
-//
-////
-////    udpScanReq.srcPort = 5678;
-////        udpScanReq.destPort = 45;
-////    ScanResult udpScanResultForPort = con->runUDPScan(udpScanReq);
-////    ProtocolScanRequest req;
-////    req.srcPort = 5678;
-////    req.desPort = 45;
-////    req.sourceIp = con->hostDevAndIp.ip;
-////        req.sourceIp = "2001:18e8:2:28a6:354a:d9cc:2b81:d47a";
-////    req.destIp = "140.182.147.5";
-////        req.destIp = "127.0.0.1";
-////    req.destIp="fe80::222:fbff:fe19:fb8e";
-////    req.destIp = "2607:f8b0:400c:c01::69";
-////        req.destIp = "2001:4860:4860::8844";
-////    for(int i=0;i<=255;i++)
-////    {
-////        cout<<"\n---------------------------\n";
-////        req.protocolNumber = 213;
-////        con->runScanForProtocol(req);
-////        cout<<"\n---------------------------\n";
-//        
-////    }
-//
-//
-//    
-con->populateIpAddressToScan(allIPaddress);
-//FIX: hack for v6 localhost
-//con->sourceIP = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
-//    con->sourceIP = "::1";
-cout<<"\n Total Ip address"<<allIPaddress.size();
-//////con->setTargetIPAddress(DEST_IP);
-con->spawnThreads=true;
-con->startScan();
-//    
-//    
-//    
-//    
-//    //con->setUpJobsAndJobDistribution();
-//    //con->scanPortsWithThread();
-//    //con->scanPorts();
-//    //    Job *j = con->getNextJob(0);
-//    //    j=con->getNextJob(1);
-//    //    j=con->getNextJob(2);
-//    //    j=con->getNextJob(3);
-//    //    j=con->getNextJob(4);
-//    //    j=con->getNextJob(1);
-//    //    j=con->getNextJob(1);
-//    //    j=con->getNextJob(0);
-//    //    j=con->getNextJob(3);
-//    //    j=con->getNextJob(3);
-//    //    j=con->getNextJob(2);
-//    //    j=con->getNextJob(1);
-//    //con->scanPorts();
-//    //    con->printScanTypeConf();
-//    //    con->scanPorts();
+    //    ScanRequest newReq;
+    //    newReq.srcPort = 5678;
+    //    newReq.destPort = 80;
+    //    newReq.scanType = SYN_SCAN;
+    //    newReq.destIp="129.79.246.79";
+    //    newReq.sourceIp = con->hostDevAndIp.ip;
+    //////    newReq.destIp = "::1";
+    ////    newReq.destIp = "2607:f8b0:400c:c01::69";
+    //    ScanResult res = con->runTCPscan(newReq);
+    //    cout<<getStringForPortState(res.tcp_portState);
+    //
+    ////    2001:4860:4860::8888
+    //    //2001:18e8:2:28a6:462a:60ff:fef3:c6ae
+    ////    ScanRequest udpScanReq;// = createScanRequestFor(5678, 53, con->hostDevAndIp.ip, "8.8.8.8",UDP_SCAN);
+    ////    udpScanReq.destIp = "8.8.8.8";
+    ////        udpScanReq.destIp = "129.79.246.79";
+    ////    udpScanReq.sourceIp = con->hostDevAndIp.ip;
+    ////    udpScanReq.destIp = "2607:f8b0:400c:c01::69";
+    ////    udpScanReq.destIp = "2607:f8b0:400c:c01::68";
+    ////    udpScanReq.sourceIp = "fe80::462a:60ff:fef3:c6ae";
+    ////    udpScanReq.destIp = "fe80::5054:ff:fefe:23e4";
+    ////    udpScanReq.sourceIp = "::1";
+    //    //    udpScanReq.destIp = "fe80::5054:ff:fefe:23e4";
+    ////    udpScanReq.destIp = "::1";
+    //
+    //
+    //        //udpScanReq.sourceIp = "140.182.146.113";
+    //
+    ////
+    ////    udpScanReq.srcPort = 5678;
+    ////        udpScanReq.destPort = 45;
+    ////    ScanResult udpScanResultForPort = con->runUDPScan(udpScanReq);
+    ////    ProtocolScanRequest req;
+    ////    req.srcPort = 5678;
+    ////    req.desPort = 45;
+    ////    req.sourceIp = con->hostDevAndIp.ip;
+    ////        req.sourceIp = "2001:18e8:2:28a6:354a:d9cc:2b81:d47a";
+    ////    req.destIp = "140.182.147.5";
+    ////        req.destIp = "127.0.0.1";
+    ////    req.destIp="fe80::222:fbff:fe19:fb8e";
+    ////    req.destIp = "2607:f8b0:400c:c01::69";
+    ////        req.destIp = "2001:4860:4860::8844";
+    ////    for(int i=0;i<=255;i++)
+    ////    {
+    ////        cout<<"\n---------------------------\n";
+    ////        req.protocolNumber = 213;
+    ////        con->runScanForProtocol(req);
+    ////        cout<<"\n---------------------------\n";
+    //
+    ////    }
+    //
+    //
+    //
+    con->populateIpAddressToScan(allIPaddress);
+    //FIX: hack for v6 localhost
+    //con->sourceIP = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
+    //    con->sourceIP = "::1";
+    cout<<"\n Total Ip address"<<allIPaddress.size();
+    //////con->setTargetIPAddress(DEST_IP);
+    con->spawnThreads=true;
+    
+    time_t start, end;
+    double diff=0;
+    time(&start);
+    con->startScan();
+    time(&end);
+    diff = difftime(end, start);
+    cout<<diff;
+    //
+    //
+    //
+    //
+    //    //con->setUpJobsAndJobDistribution();
+    //    //con->scanPortsWithThread();
+    //    //con->scanPorts();
+    //    //    Job *j = con->getNextJob(0);
+    //    //    j=con->getNextJob(1);
+    //    //    j=con->getNextJob(2);
+    //    //    j=con->getNextJob(3);
+    //    //    j=con->getNextJob(4);
+    //    //    j=con->getNextJob(1);
+    //    //    j=con->getNextJob(1);
+    //    //    j=con->getNextJob(0);
+    //    //    j=con->getNextJob(3);
+    //    //    j=con->getNextJob(3);
+    //    //    j=con->getNextJob(2);
+    //    //    j=con->getNextJob(1);
+    //    //con->scanPorts();
+    //    //    con->printScanTypeConf();
+    //    //    con->scanPorts();
 	return 0;
 }
 
