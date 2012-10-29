@@ -965,7 +965,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         if(isv6)
             sprintf(filter_exp,"(icmp6 && src host %s) || (src host %s && tcp dst port %d)",kRequest.destIp,kRequest.destIp,kRequest.srcPort);
         else
-            sprintf(filter_exp,"(icmp || src host %s)",kRequest.destIp,kRequest.destIp);
+            sprintf(filter_exp,"src host %s",kRequest.destIp);
         
 //    }
 //    sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
