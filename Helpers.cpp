@@ -218,9 +218,11 @@ devAndIp getMyIpAddress()
     
     const char *v6 ="2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
     const char *ll = "::1";
-    strcpy(result.ipv6,v6);
+
     strcpy(result.localHost_ipv6, ll);
     char ipaddr[15];
+    char des[INET6_ADDRSTRLEN];
+
     
     const char *dummyDest = "74.125.225.209";
     const char *localHostIp = "127.0.0.1";
@@ -249,9 +251,38 @@ devAndIp getMyIpAddress()
         }
         close(dummySocket);
         
+        
+
+        
     }
     
-    
+    struct sockaddr_in6 v6addr;
+    v6addr.sin6_family = AF_INET6;
+    v6addr.sin6_port = htons(80);
+    inet_pton(AF_INET6,v6, &v6addr.sin6_addr);
+    int v6socket = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+    if(v6socket>-1)
+    {
+        socklen_t socklen = sizeof(v6addr);
+        int res = connect(v6socket,(struct sockaddr*)&v6addr , socklen);
+        if(res == 0)
+        {
+            cout<<"\n connected";
+            socklen_t srcLen = sizeof(v6addr);
+            int result = getsockname(v6socket, (struct sockaddr*)&v6addr, &srcLen);
+            if(result==0)
+            {
+                
+                inet_ntop(AF_INET6, &(v6addr.sin6_addr), des, INET6_ADDRSTRLEN);
+                cout<<des;
+            }
+            
+        }
+    }
+
+    const char *dd = "2001:18e8:2:28a6:80ee:3e23:720d:37ec";
+    strcpy(result.ipv6,dd);
+
     struct ifaddrs *adrs;
     int res =getifaddrs(&adrs);
     if(res==0)
@@ -259,10 +290,18 @@ devAndIp getMyIpAddress()
         while (1) {
             adrs=adrs->ifa_next;
             
+            
             if(adrs==NULL)
                 break;
             else
             {
+                if(adrs->ifa_addr->sa_family==AF_INET6)
+                {
+                    inet_ntop(AF_INET6, &(adrs->ifa_addr), des, INET6_ADDRSTRLEN);
+                    cout<<"\n"<<des;
+
+                }
+
                 struct sockaddr_in *so = (struct sockaddr_in*)adrs->ifa_addr;
                 const char* ipp = inet_ntoa(so->sin_addr);
                 int cmpres =strcmp(ipaddr,ipp);

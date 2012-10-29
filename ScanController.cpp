@@ -227,7 +227,7 @@ void ScanController::populatePortsList()
     int index =0;
     int port = 0;
     this->totalPortsToScan = 0;
-    for(port = 0,index = 0;port<=1024;port++)
+    for(port = 0,index = 10;port<=1024;port++)
     {
         this->portsToScan[index++]=port;
         this->totalPortsToScan++;
@@ -587,8 +587,10 @@ void ScanController::runProtocolScan()
 void ScanController::populateProtocolNumberToScan(int kProtocolNumbersList[MAX_PROTOCOL_NUMBERS])
 {
     this->totalProtocolsToScan=0;
+    flushArray(this->protocolNumbersToScan, 256);
     int index=0;
     int protocolNumber;
+    
     while ((protocolNumber=kProtocolNumbersList[index])!=-1) {
         this->protocolNumbersToScan[index]=protocolNumber;
         index++;
@@ -601,7 +603,7 @@ void ScanController::populateProtocolNumberToScan()
     
     //by default scan protocol number from 0-255
     this->totalProtocolsToScan = 0;
-    for(int i=0;i<0;i++)
+    for(int i=0;i<255;i++)
     {
         this->protocolNumbersToScan[i]=i+1;
         this->totalProtocolsToScan++;
@@ -768,7 +770,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     }
     else if(isv6)
     {
-        const char* des =  kRequest.destIp;// "::1";
+        const char* des =  kRequest.destIp;
         struct sockaddr_in6 desa; desa.sin6_family=AF_INET6; inet_pton(AF_INET6, des, &desa.sin6_addr);
         
         udp.uh_sport = htons(kRequest.srcPort);
@@ -825,6 +827,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
             srcDesIpv6 ipPair = getIpPairForIp6Header(ip6);
             if(  ((strcmp(ipPair.src, kRequest.destIp))==0) && ((strcmp(ipPair.des, kRequest.sourceIp))==0) )
             {
+                //check if icmp;
                 
                 struct icmp6_hdr *icmp6 = (struct icmp6_hdr*)(recPakcet+eth_fr_size+40);
                 logICMP6Header(icmp6);
@@ -838,11 +841,11 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
                     unsigned int type = (unsigned short)icmp6->icmp6_type;
                     if(type==3 && (code==1 || code==2 || code==3 || code==9 || code ==10 || code==13))
                         status.udp_portState = kFiltered;
-                    else{
-                        status.udp_portState = kUnkown;
-                    }
                     
                 }
+            }
+            else{
+                status.udp_portState = kOpenORFiltered;
             }
             
         }
@@ -886,8 +889,22 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
                     }
                     
                 }
+                else if((unsigned int)iph->ip_p == IPPROTO_UDP)
+                {
+                    //FIX:
+                    cout<<"\n got upd for udp request";
+                }
+                else
+                {
+                    cout<<"\n got response for udp but unknown protocol";
+                    //status.udp_portState = kOpenORFiltered;
+                }
                 
                 
+            }
+            else
+            {
+                cout<<"\n got udp response but not for me";
             }
             
         }
@@ -1424,7 +1441,6 @@ void printProtocolScanResult(ProtocolScanResult kResult)
             
             AllScanResult res =  kResult.tcpOrUdpPortScans.udpPortsScanResult[i];
             cout<<"\n UDP PROTO SCAN PORT:"<<res.portNo<<" | "<<getStringForPortState(res.udpState);
-            
         }
     }
     else if(kResult.protocolNumber ==IPPROTO_TCP)
@@ -1532,7 +1548,7 @@ void ScanController::scanPorts()
         //else if job is protocol scan
         else if(nextJob.type == kProtocolScan )
         {
-            if(nextJob.protocolNumber == IPPROTO_TCP)
+            if(nextJob.protocolNumber == IPPROTO_TCP && false)
             {
                 //For all ports gather scanresult for all types of scan
                 //                ProtocolScanResult tcpScanResult;
@@ -1587,7 +1603,7 @@ void ScanController::scanPorts()
                 
                 
             }
-            else if(nextJob.protocolNumber <= IPPROTO_MAX && nextJob.protocolNumber!=IPPROTO_TCP && nextJob.protocolNumber!=IPPROTO_UDP)//for other protocols including ICMP
+            else if(nextJob.protocolNumber <= IPPROTO_MAX && nextJob.protocolNumber!=IPPROTO_TCP && nextJob.protocolNumber!=IPPROTO_UDP && false)//for other protocols including ICMP
             {
                 //not port is involved
                 nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
@@ -1628,7 +1644,15 @@ void ScanController::setUpJobsAndJobDistribution()
     int jobId = 0;
     for (int i=0; i<this->totalIpAddressToScan; i++) {
         const char *nextIp = this->allIpAddressToScan[i].c_str();
-        
+        char *srcIp;
+        if(isIpV6(nextIp))
+        {
+            srcIp = this->hostDevAndIp.ipv6;
+        }
+        else
+        {
+            srcIp = this->hostDevAndIp.ip;
+        }
         totalJobs = totalJobs+this->totalPortsToScan;//+this->totalProtocolsToScan;
         //this->jobQueue.resize(totalJobs);
         for(int portIndex=0;portIndex<totalPortsToScan;portIndex++)
@@ -1640,7 +1664,9 @@ void ScanController::setUpJobsAndJobDistribution()
             //TODO: remove hard coding for SRC_PORT
             newJob.srcPort = SRC_PORT;
             newJob.desPort = destPort;
-            newJob.srcIp = this->sourceIP;
+            
+            
+            newJob.srcIp = srcIp;
             newJob.desIp = (char*)nextIp;
             newJob.scanTypeToUse[SYN_SCAN] = this->typeOfScans[SYN_SCAN];
             newJob.scanTypeToUse[ACK_SCAN] = this->typeOfScans[ACK_SCAN];
@@ -1673,7 +1699,7 @@ void ScanController::setUpJobsAndJobDistribution()
             else
                 newJob.totalPortsForProtocolScan = -1;
             
-            newJob.srcIp = this->sourceIP;
+            newJob.srcIp = srcIp;
             newJob.desIp = (char*)nextIp;
             
             newJob.srcPort = SRC_PORT;
@@ -1771,9 +1797,10 @@ void ScanController::setUpJobsAndJobDistribution()
 
 Job  ScanController::getNextJob(int kWorkerId)
 {
+    pthread_mutex_lock(&kMutex);
+
     Job nJob;
     
-    pthread_mutex_lock(&kMutex);
     
     //    int curretJob = workDistribution[kWorkerId][JOB_CURRENT_INDEX];
     //    int startJob = workDistribution[kWorkerId][JOB_START_INDEX];
@@ -1852,7 +1879,7 @@ void* handleJob(void *arg)
         else
         {
             //cout<<"\n Job for : "<<myId<<"sip :"<<nextJob.srcIp<<" dip :"<<nextJob.desIp<<" sp ;"<<nextJob.srcPort<<" dp ;  "<<nextJob.desPort;
-            if(nextJob.type == kPortScan)
+            if(nextJob.type == kPortScan && false)
             {
                 //pthread_mutex_lock(&k_tcp_scan_result_mutex);
                 cout<<"\n>>>>>>>>>>>>>>>>>>>>>>>>>Starting Job<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
@@ -1918,7 +1945,7 @@ void* handleJob(void *arg)
             }
             else if(nextJob.type == kProtocolScan )
             {
-                if(nextJob.protocolNumber == IPPROTO_TCP)
+                if(nextJob.protocolNumber == IPPROTO_TCP && false)
                 {
                     //For all ports gather scanresult for all types of scan
                     //                ProtocolScanResult tcpScanResult;
@@ -1974,7 +2001,7 @@ void* handleJob(void *arg)
                     
                     
                 }
-                else if(nextJob.protocolNumber <= IPPROTO_MAX && nextJob.protocolNumber!=IPPROTO_TCP && nextJob.protocolNumber!=IPPROTO_UDP)//for other protocols including ICMP
+                else if(nextJob.protocolNumber <= IPPROTO_MAX && nextJob.protocolNumber!=IPPROTO_TCP && nextJob.protocolNumber!=IPPROTO_UDP && false)//for other protocols including ICMP
                 {
                     //not port is involved
                     nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;

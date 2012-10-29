@@ -21,7 +21,7 @@ int main(int argc, const char * argv[])
     //    getAllIPV6AddressesInSubnet(ipv6, mask);
     //    return 0;
     
-    getMyIpAddress();
+    //getMyIpAddress();
     //return 0;
     
     //create scan controller with default parameters
@@ -247,7 +247,7 @@ int main(int argc, const char * argv[])
                     }
                 }else protocolList[0]=atoi(val);
                 
-            }//con->populateProtocolNumberToScan(protocolList);
+            }con->populateProtocolNumberToScan(protocolList);
         }
         
         
