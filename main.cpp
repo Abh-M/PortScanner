@@ -50,7 +50,6 @@ int main(int argc, const char * argv[])
             char*ipAddress = strtok((char *)NULL, valueSeperator);
             if(ipAddress!=NULL)
             {
-                //                vector<string> allIPaddress;
                 allIPaddress.push_back(ipAddress);
                 //cout<<"IP Address Entered: "<<ipAddress;
                 //Use ipaddress as required
@@ -144,7 +143,7 @@ int main(int argc, const char * argv[])
             
             
 		}
-		if((strcmp(param, ARG_SPEED))==0)
+		if((strstr(param, ARG_SPEED))!=NULL)
 		{
             //enable multithreading
 			con->spawnThreads = true;
@@ -205,11 +204,10 @@ int main(int argc, const char * argv[])
         {
             //seperate protocols to scan according to whether user has entered range or individual protocol numbers.
             char*protocols= strtok((char *)param, valueSeperator);
-            //cout<<"Protocols"<<protocols;
             int endProtocol;
             int startProtocol;
-            int protocolList[255];
-            flushArray(protocolList, 255);
+            int protocolList[MAX_PROTOCOL_NUMBERS];
+            flushArray(protocolList, MAX_PROTOCOL_NUMBERS);
             while ((val = strtok(NULL, valueSeperator))!=NULL)
             {
                 char *value;
@@ -217,15 +215,24 @@ int main(int argc, const char * argv[])
                 if(strstr(val,"-")!=NULL)
                 {
                     value = strtok(val,"[-]");
-                    //con->startPort = atoi(value);
                     startProtocol = atoi(value);
-                    
                     while(value!=NULL)
                     {
                         endProtocol = atoi(value);
                         value = strtok(NULL,"[-]");
-                        
                     }
+//                    int index=0;
+//                    for(int i=startProtocol;i<=endProtocol;i++)
+//                    {
+//                        if(i<MAX_PROTOCOL_NUMBERS)
+//                            protocolList[index++]=i;
+//                        else
+//                        {
+//                            cout<<"\n Protocol number out of range, scanning "<<startProtocol<<" to "<<i;
+//                            break;
+//                        }
+//                        
+//                    }
                     cout<<"start Protocol:"<<startProtocol<<endl;
                     cout<<"end Protocol:"<<endProtocol;
                 }
@@ -247,7 +254,8 @@ int main(int argc, const char * argv[])
                     }
                 }else protocolList[0]=atoi(val);
                 
-            }con->populateProtocolNumberToScan(protocolList);
+            }
+            con->populateProtocolNumberToScan(protocolList);
         }
         
         
@@ -256,67 +264,9 @@ int main(int argc, const char * argv[])
     
     
     
-    //    ScanRequest newReq;
-    //    newReq.srcPort = 5678;
-    //    newReq.destPort = 80;
-    //    newReq.scanType = SYN_SCAN;
-    //    newReq.destIp="129.79.246.79";
-    //    newReq.sourceIp = con->hostDevAndIp.ip;
-    //////    newReq.destIp = "::1";
-    ////    newReq.destIp = "2607:f8b0:400c:c01::69";
-    //    ScanResult res = con->runTCPscan(newReq);
-    //    cout<<getStringForPortState(res.tcp_portState);
-    //
-    ////    2001:4860:4860::8888
-    //    //2001:18e8:2:28a6:462a:60ff:fef3:c6ae
-    ////    ScanRequest udpScanReq;// = createScanRequestFor(5678, 53, con->hostDevAndIp.ip, "8.8.8.8",UDP_SCAN);
-    ////    udpScanReq.destIp = "8.8.8.8";
-    ////        udpScanReq.destIp = "129.79.246.79";
-    ////    udpScanReq.sourceIp = con->hostDevAndIp.ip;
-    ////    udpScanReq.destIp = "2607:f8b0:400c:c01::69";
-    ////    udpScanReq.destIp = "2607:f8b0:400c:c01::68";
-    ////    udpScanReq.sourceIp = "fe80::462a:60ff:fef3:c6ae";
-    ////    udpScanReq.destIp = "fe80::5054:ff:fefe:23e4";
-    ////    udpScanReq.sourceIp = "::1";
-    //    //    udpScanReq.destIp = "fe80::5054:ff:fefe:23e4";
-    ////    udpScanReq.destIp = "::1";
-    //
-    //
-    //        //udpScanReq.sourceIp = "140.182.146.113";
-    //
-    ////
-    ////    udpScanReq.srcPort = 5678;
-    ////        udpScanReq.destPort = 45;
-    ////    ScanResult udpScanResultForPort = con->runUDPScan(udpScanReq);
-    ////    ProtocolScanRequest req;
-    ////    req.srcPort = 5678;
-    ////    req.desPort = 45;
-    ////    req.sourceIp = con->hostDevAndIp.ip;
-    ////        req.sourceIp = "2001:18e8:2:28a6:354a:d9cc:2b81:d47a";
-    ////    req.destIp = "140.182.147.5";
-    ////        req.destIp = "127.0.0.1";
-    ////    req.destIp="fe80::222:fbff:fe19:fb8e";
-    ////    req.destIp = "2607:f8b0:400c:c01::69";
-    ////        req.destIp = "2001:4860:4860::8844";
-    ////    for(int i=0;i<=255;i++)
-    ////    {
-    ////        cout<<"\n---------------------------\n";
-    ////        req.protocolNumber = 213;
-    ////        con->runScanForProtocol(req);
-    ////        cout<<"\n---------------------------\n";
-    //
-    ////    }
-    //
-    //
-    //
     con->populateIpAddressToScan(allIPaddress);
-    //FIX: hack for v6 localhost
-    //con->sourceIP = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
-    //    con->sourceIP = "::1";
     cout<<"\n Total Ip address"<<allIPaddress.size();
-    //////con->setTargetIPAddress(DEST_IP);
-//    con->spawnThreads=true;
-    
+
     time_t start, end;
     double diff=0;
     time(&start);
@@ -324,28 +274,6 @@ int main(int argc, const char * argv[])
     time(&end);
     diff = difftime(end, start);
     cout<<diff;
-    //
-    //
-    //
-    //
-    //    //con->setUpJobsAndJobDistribution();
-    //    //con->scanPortsWithThread();
-    //    //con->scanPorts();
-    //    //    Job *j = con->getNextJob(0);
-    //    //    j=con->getNextJob(1);
-    //    //    j=con->getNextJob(2);
-    //    //    j=con->getNextJob(3);
-    //    //    j=con->getNextJob(4);
-    //    //    j=con->getNextJob(1);
-    //    //    j=con->getNextJob(1);
-    //    //    j=con->getNextJob(0);
-    //    //    j=con->getNextJob(3);
-    //    //    j=con->getNextJob(3);
-    //    //    j=con->getNextJob(2);
-    //    //    j=con->getNextJob(1);
-    //    //con->scanPorts();
-    //    //    con->printScanTypeConf();
-    //    //    con->scanPorts();
 	return 0;
 }
 

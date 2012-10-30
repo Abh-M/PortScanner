@@ -259,7 +259,8 @@ void ScanController::populateIpAddressToScan(vector<string> kIpAddressList)
         else
         {
             this->totalIpAddressToScan =(int) kIpAddressList.size();
-            this->allIpAddressToScan=kIpAddressList;
+            string str = kIpAddressList[0];
+            this->allIpAddressToScan[0]=str;
             this->devString = this->hostDevAndIp.dev;
             this->sourceIP = this->hostDevAndIp.ip;
             
@@ -300,7 +301,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     if(islhost)
     {
         dev = this->hostDevAndIp.localhost_dev;
-        eth_fr_size=4;
+        eth_fr_size =4;
     }
     else
     {
@@ -452,7 +453,17 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         
         
     }
-    
+//    time_t start, end;
+//    double diff=0;
+//    time(&start);
+//    while (1) {
+//        time(&end);
+//        diff = difftime(end, start);
+//        //cout<<"\n..."<<diff;
+//        if(diff>=3.0)
+//            break;
+//    }
+
     
     
     
@@ -509,18 +520,16 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         }
         else if(!isv6)//if v4
         {
-            struct ip *iph = (struct ip*)(recPakcet+14);
+            struct ip *iph = (struct ip*)(recPakcet+eth_fr_size);
             cout<<"\nOuter Ip Header :";
-            logIpHeader(iph);
             
             unsigned int proto = (unsigned)iph->ip_p;
             if((strcmp(inet_ntoa(iph->ip_src), req.destIp))==0)
             {
+                logIpHeader(iph);
                 if(proto==IPPROTO_ICMP )
                 {
-                    
-                    
-                    struct icmp *icmpHdr = (struct icmp*)(recPakcet  + 20 + 14);
+                    struct icmp *icmpHdr = (struct icmp*)(recPakcet  + 20 + eth_fr_size);
                     cout<<"\n ICMP header";
                     logICMPHeader(icmpHdr);
                     
@@ -534,9 +543,8 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
                     else
                     {
                         //analyze icmp payload
-                        struct ip *p =(struct ip*)(recPakcet+14+20+8);
-                        cout<<"\n Inner Ip Header";
-                        logIpHeader(p);
+                        //FIX: remove harded coded values
+                        struct ip *p =(struct ip*)(recPakcet+eth_fr_size+20+8);
                         cout<<"\n......"<<(unsigned short)p->ip_id;
                         if( ((unsigned short)p->ip_id) == ip_id)
                         {
@@ -853,16 +861,12 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         {
             //icmp
             //FIX:remove hardcoding
-            struct ip iip;
             struct ip *iph = (struct ip*)(recPakcet+eth_fr_size);
-            iip.ip_dst = iph->ip_dst;
-            iip.ip_src = iph->ip_src;
-            logIpHeader(iph);
             srcDesIpv4 srcAndDes = getIpPairForIpHeader(iph);
             //cross check source and destination address
             if( (strcmp(srcAndDes.src, kRequest.destIp))==0 && (strcmp(srcAndDes.des, kRequest.sourceIp))==0)
             {
-                //                    logIpHeader(iph);
+                logIpHeader(iph);
                 if((unsigned int)iph->ip_p == IPPROTO_ICMP)
                 {
                     //FIX:remove hard-coded value
@@ -915,16 +919,6 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         status.udp_portState = kOpenORFiltered;
     }
     
-    
-    
-    
-    
-    
-    
-    //close socket
-    //close pcap session
-    
-    
     close(sd);
     pcap_close(handle);
     return status;
@@ -974,9 +968,6 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         sprintf(filter_exp,"host %s",kRequest.destIp);
     else
         sprintf(filter_exp,"src host %s",kRequest.destIp);
-        int len1 = strlen(filter_exp);
-    //    }
-    //    sprintf(filter_exp,"(icmp && src host %s) || (src host %s && dst port 5678)",kRequest.destIp,kRequest.destIp);
     
     bpf_u_int32 mask;
     bpf_u_int32 net;
@@ -990,7 +981,6 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     if (handle == NULL) {
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
     }
-    int len = strlen(filter_exp);
     if (pcap_compile(handle, &fp, filter_exp, 0, net) == -1) {
         fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(handle));
     }
@@ -1153,14 +1143,17 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         {
 
             v6hdr = (struct ip6_hdr*)(recPakcet+eth_fr_size);
+            //FIX:check if source and destination are valid
             if(v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
             {
                 isTcp = true;
                 isIcmp = false;
                 isicmp6 = false;
             }
-            else if(v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
+            else if(v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ICMPV6)
             {
+                
+                
                 isTcp = false;
                 isIcmp = false;
                 isicmp6 = true;
@@ -1170,17 +1163,29 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             ip_hdr_size = sizeof(struct ip6_hdr);
             logIP6Header(v6hdr);
         }
-        else
+        else//it is ipv4
         {
             //logIpHeader(iph);
-            
-            
+            //FIX: check if source and destinateion are valid
             iph = (struct ip*)(recPakcet + eth_fr_size);
-            isTcp = ((unsigned int)iph->ip_p == IPPROTO_TCP);
-            isIcmp = ((unsigned int)iph->ip_p == IPPROTO_ICMP);
-            ip_hdr_size = sizeof(struct ip);
+            srcDesIpv4 ipPair = getIpPairForIpHeader(iph);
+            int sourceValid = strcmp(ipPair.des,kRequest.sourceIp);
+            int destValid = strcmp(ipPair.src, kRequest.destIp);
+            if(sourceValid==0 && destValid==0)
+            {
+                isTcp = ((unsigned int)iph->ip_p == IPPROTO_TCP);
+                isIcmp = ((unsigned int)iph->ip_p == IPPROTO_ICMP);
+                ip_hdr_size = sizeof(struct ip);
+            }
+            else
+            {
+                isTcp = false;
+                isIcmp = false;
+            }
             
         }
+        
+        
         if(isTcp)
         {
             //TODO : hardcode value of will change is this is ipv6
@@ -1195,10 +1200,6 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
                     logIpHeader(iph);
                 
                 logTCPHeader(tcpHdr);
-                
-                //logTCPHeader(tcpHdr);
-                //check if src and destination ports are valid
-                //get which flags are set in the response
                 unsigned char flags = tcpHdr->th_flags;
                 
                 
@@ -1269,7 +1270,6 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             
             
         }
-        //        else if((unsigned int)iph->ip_p == IPPROTO_ICMP)
         else if(isIcmp)
         {
             //Handle ICMP packets
@@ -1386,11 +1386,8 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             status.tcp_portState = kFiltered;
         
     }
-    //pthread_mutex_unlock(&k_tcp_scan_result_mutex);
     
-    //close socket
     close(sd);
-    //close pcap session
     pcap_close(handle);
     
     return status;
@@ -1548,7 +1545,7 @@ void ScanController::scanPorts()
         //else if job is protocol scan
         else if(nextJob.type == kProtocolScan )
         {
-            if(nextJob.protocolNumber == IPPROTO_TCP && false)
+            if(nextJob.protocolNumber == IPPROTO_TCP)
             {
                 //For all ports gather scanresult for all types of scan
                 //                ProtocolScanResult tcpScanResult;
@@ -1603,7 +1600,7 @@ void ScanController::scanPorts()
                 
                 
             }
-            else if(nextJob.protocolNumber <= IPPROTO_MAX && nextJob.protocolNumber!=IPPROTO_TCP && nextJob.protocolNumber!=IPPROTO_UDP && false)//for other protocols including ICMP
+            else if(nextJob.protocolNumber <= IPPROTO_MAX && nextJob.protocolNumber!=IPPROTO_TCP && nextJob.protocolNumber!=IPPROTO_UDP)//for other protocols including ICMP
             {
                 //not port is involved
                 nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
@@ -1647,6 +1644,7 @@ void ScanController::setUpJobsAndJobDistribution()
         char *srcIp;
         if(isIpV6(nextIp))
         {
+
             srcIp = this->hostDevAndIp.ipv6;
         }
         else
@@ -1879,7 +1877,7 @@ void* handleJob(void *arg)
         else
         {
             //cout<<"\n Job for : "<<myId<<"sip :"<<nextJob.srcIp<<" dip :"<<nextJob.desIp<<" sp ;"<<nextJob.srcPort<<" dp ;  "<<nextJob.desPort;
-            if(nextJob.type == kPortScan && false)
+            if(nextJob.type == kPortScan)
             {
                 //pthread_mutex_lock(&k_tcp_scan_result_mutex);
                 cout<<"\n>>>>>>>>>>>>>>>>>>>>>>>>>Starting Job<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
@@ -1945,7 +1943,7 @@ void* handleJob(void *arg)
             }
             else if(nextJob.type == kProtocolScan )
             {
-                if(nextJob.protocolNumber == IPPROTO_TCP && false)
+                if(nextJob.protocolNumber == IPPROTO_TCP )
                 {
                     //For all ports gather scanresult for all types of scan
                     //                ProtocolScanResult tcpScanResult;
@@ -1973,7 +1971,7 @@ void* handleJob(void *arg)
                     
                     
                 }
-                else if(nextJob.protocolNumber == IPPROTO_UDP)
+                else if(nextJob.protocolNumber == IPPROTO_UDP )
                 {
                     //For all ports gather result for UDP scan result
                     //                ProtocolScanResult  udpScanResult;
@@ -2001,7 +1999,7 @@ void* handleJob(void *arg)
                     
                     
                 }
-                else if(nextJob.protocolNumber <= IPPROTO_MAX && nextJob.protocolNumber!=IPPROTO_TCP && nextJob.protocolNumber!=IPPROTO_UDP && false)//for other protocols including ICMP
+                else if(nextJob.protocolNumber <= IPPROTO_MAX && nextJob.protocolNumber!=IPPROTO_TCP && nextJob.protocolNumber!=IPPROTO_UDP)//for other protocols including ICMP
                 {
                     //not port is involved
                     nextJob.protocolScanResult.protocolNumber = nextJob.protocolNumber;
