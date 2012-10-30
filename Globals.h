@@ -82,7 +82,7 @@
 #define NO_JOB -99
 #define NOT_STARTED -1
 #define MAX_PROTOCOL_NUMBERS 256
-#define MAX_PORTS 200
+#define MAX_PORTS 256
 #define MIN_PORTS 1
 #define MAX_JOBS MAX_PORTS+MAX_PROTOCOL_NUMBERS
 //--------------------------------------------------------//

@@ -13,11 +13,13 @@ using namespace std;
 
 
 
+//move this int main
 bool islocalhost(char *kip)
 {
     bool result= false;
     if(strcmp(kip, "127.0.0.1")==0 || strcmp(kip, "0.0.0.0")==0 || strcmp("::1", kip)==0 )
         result = true;
+    
     
     return result;
 }

@@ -137,43 +137,6 @@ void ScanController::printScanTypeConf()
 }
 
 
-//void ScanController::setSrcAndDesAndDevString(bool islocalhost, char *kDestIp)
-//{
-//    if(islocalhost)
-//    {
-//        this->devString = hostDevAndIp.localhost_dev;
-//        this->sourceIP = hostDevAndIp.localHost_ip;
-//        this->targetIP = hostDevAndIp.localHost_ip;
-//    }
-//    else if(!islocalhost && kDestIp!=NULL)
-//    {
-//        this->devString = hostDevAndIp.dev;
-//        this->sourceIP = hostDevAndIp.ip;
-//        this->targetIP = kDestIp;
-//
-//    }
-//    else
-//    {
-//        cout<<"\n Invalid Ip addresses";
-//    }
-//
-//}
-
-//void ScanController::setTargetIPAddress(char *kTargetIp)
-//{
-//    if(strcmp(kTargetIp, hostDevAndIp.localHost_ip)==0)
-//    {
-//        //if localhost
-//        setSrcAndDesAndDevString(true, NULL);
-//
-//    }
-//    else
-//    {
-//        setSrcAndDesAndDevString(false, kTargetIp);
-//
-//    }
-//}
-
 
 void ScanController::populatePortsList(int kStart, int kEnd)
 {
@@ -203,12 +166,6 @@ void ScanController::populatePortsList(int kPortsList[MAX_PORTS])
         this->portsToScan[this->totalPortsToScan++]=kPortsList[index];
         index++;
     }
-    
-    
-//    for (int i=0; i<this->totalPortsToScan;i++) {
-//        cout<<"\n PORT : "<<this->portsToScan[i];
-//    }
-    
     
 }
 
@@ -299,15 +256,18 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     bool islhost = islocalhost(req.destIp);
     int eth_fr_size =14;
     
-    if(islhost)
+    if(islhost && isv6)
     {
         dev = this->hostDevAndIp.localhost_dev;
-        eth_fr_size =4;
+        req.sourceIp = this->hostDevAndIp.ipv6;
+        req.destIp = this->hostDevAndIp.ipv6;
     }
-    else
+    else if(islhost && !isv6)
     {
-        dev = this->hostDevAndIp.dev;
-        eth_fr_size = 14;
+        dev = this->hostDevAndIp.localhost_dev;
+        req.sourceIp = this->hostDevAndIp.ip;
+        req.destIp = this->hostDevAndIp.ip;
+        
     }
     //cout<<dev;
     
@@ -673,35 +633,32 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     
     
     bool isv6= isIpV6(kRequest.destIp);
-    
+    bool islhost = islocalhost(kRequest.destIp);
+
     
     char *dev, errBuff[50];
-    bool islhost = islocalhost(kRequest.destIp);
-    int eth_fr_size;
+    int eth_fr_size=14;
     
-    if(islhost)
+    if(islhost && isv6)
     {
         dev = this->hostDevAndIp.localhost_dev;
-        eth_fr_size=4;
+        kRequest.sourceIp = this->hostDevAndIp.ipv6;
+        kRequest.destIp = this->hostDevAndIp.ipv6;
     }
-    else
+    else if(islhost && !isv6)
     {
-        dev = this->hostDevAndIp.dev;
-        eth_fr_size = 14;
+        dev = this->hostDevAndIp.localhost_dev;
+        kRequest.sourceIp = this->hostDevAndIp.ip;
+        kRequest.destIp = this->hostDevAndIp.ip;
+        
     }
-    //cout<<dev;
     
     
     pcap_t *handle;
-    
-    
     struct bpf_program fp;
-    
     //set filter exp depending upon source port
-    //TODO: dynamically generate pcap filter expressions
     char filter_exp[256];
     sprintf(filter_exp,"(icmp && src host %s) || (icmp6 && src host %s)",kRequest.destIp,kRequest.destIp);
-    //cout<<"\n FILTER EXP "<<filter_exp;
     
     bpf_u_int32 mask;
     bpf_u_int32 net;
@@ -736,8 +693,6 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     else
         packet = (u_char *)malloc(60);
     
-//    int sz = sizeof(struct udphdr);
-//    //cout<<sz;
     
     
     
@@ -962,7 +917,6 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         dev = this->hostDevAndIp.localhost_dev;
         kRequest.sourceIp = this->hostDevAndIp.ipv6;
         kRequest.destIp = this->hostDevAndIp.ipv6;
-        //eth_fr_size=4;
     }
     else if(islhost && !isv6)
     {
@@ -1810,41 +1764,20 @@ void ScanController::setUpJobsAndJobDistribution()
 }
 
 
-Job getBonusJobForWorker(int kWorkerId)
-{
-    Job nJob;
-
-    for(int wkr=0;wkr<MAX_WORKERS;wkr++)
-    {
-        if(kWorkerId!=wkr)
-            //look for pending jobs of other workers
-        {
-            int currJob = jobDistribution[wkr][JOB_CURRENT_INDEX];
-            int startJob = jobDistribution[wkr][JOB_START_INDEX];
-            int endJob = jobDistribution[wkr][JOB_END_INDEX];
-            if(currJob<endJob)
-            {
-                if(currJob==-1)
-                    currJob = startJob;
-                else
-                    currJob++;
-                nJob = jobQueue[currJob];
-                jobDistribution[wkr][JOB_CURRENT_INDEX] = currJob;
-                break;
-            }
-        }
-    }
-    return nJob;
-
-}
+//Job getBonusJobForWorker(int kWorkerId)
+//{
+//    Job nJob;
+//
+//    return nJob;
+//
+//}
 
 
-Job  ScanController::getNextJob(int kWorkerId)
+Job*  ScanController::getNextJob(int kWorkerId)
 {
     pthread_mutex_lock(&kMutex);
 
-    Job nJob;
-    nJob.type = kInvalidJob;
+    Job *nJob = NULL;
     
     int curretJob = jobDistribution[kWorkerId][JOB_CURRENT_INDEX];
     int startJob = jobDistribution[kWorkerId][JOB_START_INDEX];
@@ -1859,17 +1792,34 @@ Job  ScanController::getNextJob(int kWorkerId)
         else
             curretJob++;
         
-        //        workDistribution[kWorkerId][JOB_CURRENT_INDEX] = curretJob;
         jobDistribution[kWorkerId][JOB_CURRENT_INDEX] = curretJob;
-        nJob = jobQueue[curretJob];
-        //nextJob = &nJob;
+        nJob = &jobQueue[curretJob];
         
     }
     else if(curretJob == endJob)
     {
         //all jobs are complete look for additional job
-        //nJob =getBonusJobForWorker(kWorkerId);
-        //nJob.type = kInvalidJob;
+        for(int wkr=0;wkr<totalWorkers;wkr++)
+        {
+            if(kWorkerId!=wkr)
+                //look for pending jobs of other workers
+            {
+                int currJob = jobDistribution[wkr][JOB_CURRENT_INDEX];
+                int startJob = jobDistribution[wkr][JOB_START_INDEX];
+                int endJob = jobDistribution[wkr][JOB_END_INDEX];
+                if(currJob<endJob)
+                {
+                    if(currJob==-1)
+                        currJob = startJob;
+                    else
+                        currJob++;
+                    nJob = &jobQueue[currJob];
+                    jobDistribution[wkr][JOB_CURRENT_INDEX] = currJob;
+                    cout<<"\n...................lllllll..................\n";
+                    break;
+                }
+            }
+        }
     }
     pthread_mutex_unlock(&kMutex);
     
@@ -1912,12 +1862,13 @@ void* handleJob(void *arg)
     Job nextJob;
     while (1)
     {
-        nextJob = sharedInstance->getNextJob(myId);
+        Job *nnj = sharedInstance->getNextJob(myId);
         
-        if(nextJob.type == kInvalidJob)
+        if(nnj==NULL)
             break;
         else
         {
+            nextJob = *nnj;
             //cout<<"\n Job for : "<<myId<<"sip :"<<nextJob.srcIp<<" dip :"<<nextJob.desIp<<" sp ;"<<nextJob.srcPort<<" dp ;  "<<nextJob.desPort;
             if(nextJob.type == kPortScan)
             {

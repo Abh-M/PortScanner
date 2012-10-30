@@ -103,7 +103,7 @@ public:
     
     
     void                    setUpJobsAndJobDistribution();
-    Job                     getNextJob(int kWorkerId);
+    Job*                     getNextJob(int kWorkerId);
     
     void                    populateIpAddressToScan(vector<string> kIpAddressList);
     void                    populateIpAddressToScan();
