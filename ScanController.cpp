@@ -946,6 +946,8 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     //// Set pcap parameters
     
     char *dev, errBuff[50];
+    char filter_exp[256];
+
     if(islhost)
     {
         dev = this->hostDevAndIp.localhost_dev;
@@ -959,12 +961,24 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     pcap_t *handle;
     struct bpf_program fp;
-    char filter_exp[256];
     memset(&filter_exp, '\0', 256);
     if(isv6)
-        sprintf(filter_exp,"host %s",kRequest.destIp);
+    {
+        if(!islhost)
+            sprintf(filter_exp,"src host %s",kRequest.destIp);
+        else
+            sprintf(filter_exp,"src host %s && dst port %d",kRequest.destIp,kRequest.srcPort);
+    }
+    
     else
-        sprintf(filter_exp,"src host %s",kRequest.destIp);
+    {
+        if(!islhost)
+            sprintf(filter_exp,"src host %s",kRequest.destIp);
+        else
+            sprintf(filter_exp,"src host %s && dst port %d",kRequest.destIp,kRequest.srcPort);
+
+    }
+    
     
     bpf_u_int32 mask;
     bpf_u_int32 net;
@@ -1143,27 +1157,40 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         
         if(isv6)
         {
-
+            //check if v6 is valid
             v6hdr = (struct ip6_hdr*)(recPakcet+eth_fr_size);
-            //FIX:check if source and destination are valid
-            if(v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
+            srcDesIpv6 ipPair = getIpPairForIp6Header(v6hdr);
+            int sourceValid = strcmp(ipPair.des,kRequest.sourceIp);
+            int destValid = strcmp(ipPair.src, kRequest.destIp);
+            if(sourceValid == 0 && destValid == 0)
             {
-                isTcp = true;
+                
+                if(v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_TCP)
+                {
+                    isTcp = true;
+                    isIcmp = false;
+                    isicmp6 = false;
+                }
+                else if(v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ICMPV6)
+                {
+                    
+                    
+                    isTcp = false;
+                    isIcmp = false;
+                    isicmp6 = true;
+                }
+                ip_hdr_size = sizeof(struct ip6_hdr);
+                logIP6Header(v6hdr);
+
+                
+            }
+            else
+            {
+                isTcp = false;
                 isIcmp = false;
                 isicmp6 = false;
             }
-            else if(v6hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ICMPV6)
-            {
-                
-                
-                isTcp = false;
-                isIcmp = false;
-                isicmp6 = true;
-            }
-            
-            
-            ip_hdr_size = sizeof(struct ip6_hdr);
-            logIP6Header(v6hdr);
+
         }
         else//it is ipv4
         {
@@ -1178,6 +1205,9 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
                 isTcp = ((unsigned int)iph->ip_p == IPPROTO_TCP);
                 isIcmp = ((unsigned int)iph->ip_p == IPPROTO_ICMP);
                 ip_hdr_size = sizeof(struct ip);
+                logIpHeader(iph);
+
+                
             }
             else
             {
@@ -1196,10 +1226,6 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             unsigned long int ack = ntohl(tcpHdr->th_ack);
             if(ack==tcp_seq+1)
             {
-                if(isv6)
-                    logIP6Header(v6hdr);
-                else
-                    logIpHeader(iph);
                 
                 logTCPHeader(tcpHdr);
                 unsigned char flags = tcpHdr->th_flags;
@@ -1391,7 +1417,8 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     close(sd);
     pcap_close(handle);
-    
+    free(packet);
+    pcap_freecode(&fp);
     return status;
     
     
