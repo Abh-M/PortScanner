@@ -352,18 +352,6 @@ devAndIp getMyIpAddress()
                         strcpy(result.localHost_ipv6,des);
                     if(strcmp(name,result.dev)==0)
                         strcpy(result.ipv6, des);
-//                    if(des!=NULL && d!=NULL)
-//                    {
-//                        cout<<"\n..............."<<des;
-//                    }
-//                    if((des!=NULL && d==NULL) && strcmp(des, result.localhost_dev)==0)
-//                    {
-//                        strcpy(result.localHost_ipv6,des);
-//                    }
-//                    else if( (des!=NULL && d==NULL) && strcmp(des, result.dev)==0)
-//                    {
-//                        strcpy(result.ipv6, des);
-//                    }
 
                 }
             }

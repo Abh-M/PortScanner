@@ -297,7 +297,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     char *dev, errBuff[50];
     bool islhost = islocalhost(req.destIp);
-    int eth_fr_size;
+    int eth_fr_size =14;
     
     if(islhost)
     {
@@ -418,7 +418,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         packet = (u_char *)malloc(sizeof(struct icmp6_hdr));
         const char* des =  req.destIp;// "::1";
         struct sockaddr_in6 desa; desa.sin6_family=AF_INET6; inet_pton(AF_INET6, des, &desa.sin6_addr);
-        if(req.protocolNumber == IPPROTO_ICMP)
+        if(req.protocolNumber == IPPROTO_ICMPV6)
         {
             struct icmp6_hdr icmp6hdr;
             icmp6hdr.icmp6_type = ICMP6_ECHO_REQUEST;
@@ -429,7 +429,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         }
         
         //sem_wait(&mutex_raw_sockets);
-        sd = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+        sd = socket(AF_INET6, SOCK_RAW, req.protocolNumber);
         int offset=2;
         if (setsockopt(sd, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)) < 0) {
             perror("setsockopt");
@@ -951,21 +951,25 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     bool isv6=isIpV6(kRequest.destIp);
     bool islhost = islocalhost(kRequest.destIp);
-    int eth_fr_size;
+    int eth_fr_size=14;
     //// Set pcap parameters
     
     char *dev, errBuff[50];
     char filter_exp[256];
 
-    if(islhost)
+    if(islhost && isv6)
     {
         dev = this->hostDevAndIp.localhost_dev;
-        eth_fr_size=4;
+        kRequest.sourceIp = this->hostDevAndIp.ipv6;
+        kRequest.destIp = this->hostDevAndIp.ipv6;
+        //eth_fr_size=4;
     }
-    else
+    else if(islhost && !isv6)
     {
-        dev = this->hostDevAndIp.dev;
-        eth_fr_size = 14;
+        dev = this->hostDevAndIp.localhost_dev;
+        kRequest.sourceIp = this->hostDevAndIp.ip;
+        kRequest.destIp = this->hostDevAndIp.ip;
+
     }
     
     pcap_t *handle;
@@ -1857,7 +1861,6 @@ Job  ScanController::getNextJob(int kWorkerId)
         
         //        workDistribution[kWorkerId][JOB_CURRENT_INDEX] = curretJob;
         jobDistribution[kWorkerId][JOB_CURRENT_INDEX] = curretJob;
-        //        nJob = allJobs[curretJob];
         nJob = jobQueue[curretJob];
         //nextJob = &nJob;
         
