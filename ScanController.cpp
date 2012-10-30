@@ -846,7 +846,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
                     unsigned int type = (unsigned short)icmp6->icmp6_type;
                     if(type==3 && (code==1 || code==2 || code==3 || code==9 || code ==10 || code==13))
                         status.udp_portState = kFiltered;
-                    
+                    //FIX: no check for type 4 code 1 : port unreachable
                 }
             }
             else{
@@ -868,14 +868,8 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
                 {
                     //FIX:remove hard-coded value
                     struct icmp *icmpHeader = (struct icmp*)(recPakcet + eth_fr_size + 20);
-                    //                        logICMPHeader(icmpHeader);
-                    //check is valid icmp is present
-                    //                        struct ip *inner_ip = (struct ip*)(recPakcet + 14 + 20 +8);
-                    //                        logIpHeader(inner_ip);
                     struct udphdr *inner_udp = (struct udphdr*)(recPakcet + eth_fr_size+20+8+20);//ether+ip+icmp+orignal ip
-                    //                        logUDPHeader(inner_udp);
                     unsigned short  kk= ntohs(inner_udp->uh_dport);
-                    
                     //as inner udp will have same source and dest port as the orignal request
                     if(kRequest.srcPort == ntohs(inner_udp->uh_sport)&&(kRequest.destPort)==ntohs(inner_udp->uh_dport))
                     {
@@ -885,8 +879,6 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
                         unsigned int type = (unsigned int)icmpHeader->icmp_type;
                         if(type==3 && (code==1 || code==2 || code==3 || code==9 || code ==10 || code==13))
                             status.udp_portState = kFiltered;
-                        
-                        
                     }
                     
                 }
@@ -917,7 +909,9 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     }
     
     close(sd);
+    pcap_freecode(&fp);
     pcap_close(handle);
+    free(packet);
     return status;
 }
 
@@ -1572,7 +1566,7 @@ void ScanController::scanPorts()
             
         }
         //else if job is protocol scan
-        else if(nextJob.type == kProtocolScan && false)
+        else if(nextJob.type == kProtocolScan)
         {
             if(nextJob.protocolNumber == IPPROTO_TCP)
             {
