@@ -21,6 +21,9 @@ int main(int argc, const char * argv[])
     //    getAllIPV6AddressesInSubnet(ipv6, mask);
     //    return 0;
     
+    
+    getV6Addr();
+    //return 0;
     //getMyIpAddress();
     //return 0;
     
@@ -207,6 +210,7 @@ int main(int argc, const char * argv[])
             int endProtocol;
             int startProtocol;
             int protocolList[MAX_PROTOCOL_NUMBERS];
+            int totalProtocols = 0;
             flushArray(protocolList, MAX_PROTOCOL_NUMBERS);
             while ((val = strtok(NULL, valueSeperator))!=NULL)
             {
@@ -221,18 +225,22 @@ int main(int argc, const char * argv[])
                         endProtocol = atoi(value);
                         value = strtok(NULL,"[-]");
                     }
-//                    int index=0;
-//                    for(int i=startProtocol;i<=endProtocol;i++)
-//                    {
-//                        if(i<MAX_PROTOCOL_NUMBERS)
-//                            protocolList[index++]=i;
-//                        else
-//                        {
-//                            cout<<"\n Protocol number out of range, scanning "<<startProtocol<<" to "<<i;
-//                            break;
-//                        }
-//                        
-//                    }
+                    int index=0;
+                    for(int i=startProtocol;i<=endProtocol;i++)
+                    {
+                        if(i<MAX_PROTOCOL_NUMBERS)
+                        {
+                            protocolList[index++]=i;
+                            totalProtocols++;
+                            
+                        }
+                        else
+                        {
+                            cout<<"\n Protocol number out of range, scanning "<<startProtocol<<" to "<<i;
+                            break;
+                        }
+                        
+                    }
                     cout<<"start Protocol:"<<startProtocol<<endl;
                     cout<<"end Protocol:"<<endProtocol;
                 }
@@ -250,12 +258,18 @@ int main(int argc, const char * argv[])
                         {
                             protocolList[i] = atoi(value);
                             i++;
+                            totalProtocols++;
                         }
                     }
-                }else protocolList[0]=atoi(val);
+                }else
+                {
+                 protocolList[0]=atoi(val);
+                    totalProtocols=1;
+                }
                 
             }
-            con->populateProtocolNumberToScan(protocolList);
+            if(totalProtocols>0)
+                con->populateProtocolNumberToScan(protocolList);
         }
         
         
@@ -266,7 +280,7 @@ int main(int argc, const char * argv[])
     
     con->populateIpAddressToScan(allIPaddress);
     cout<<"\n Total Ip address"<<allIPaddress.size();
-
+    con->sourceIP = "2001:18e8:2:28a6:adbd:be7a:b6f5:f9b9";
     time_t start, end;
     double diff=0;
     time(&start);

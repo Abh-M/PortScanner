@@ -87,7 +87,7 @@ public:
 	void                    scanPort();
     void                    scanPorts();
     void                    scanPortsWithThread();
-    void                    runProtocolScan();
+    //void                    runProtocolScan();
     ProtocolScanResult      runScanForProtocol(ProtocolScanRequest req);
 
 

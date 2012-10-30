@@ -204,9 +204,9 @@ void ScanController::populatePortsList(int kPortsList[MAX_PORTS])
     }
     
     
-    for (int i=0; i<this->totalPortsToScan;i++) {
-        cout<<"\n PORT : "<<this->portsToScan[i];
-    }
+//    for (int i=0; i<this->totalPortsToScan;i++) {
+//        cout<<"\n PORT : "<<this->portsToScan[i];
+//    }
     
     
 }
@@ -227,7 +227,7 @@ void ScanController::populatePortsList()
     int index =0;
     int port = 0;
     this->totalPortsToScan = 0;
-    for(port = 0,index = 10;port<=1024;port++)
+    for(port = 0;port<=1024;port++)
     {
         this->portsToScan[index++]=port;
         this->totalPortsToScan++;
@@ -576,17 +576,17 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
 }
 
-void ScanController::runProtocolScan()
-{
-    for(int i=0;i<totalProtocolsToScan;i++)
-    {
-        int protocolNumnber = this->protocolNumbersToScan[i];
-        cout<<"Scanning Protocol :"<<protocolNumnber<<endl;
-        ProtocolScanRequest newReq;
-        newReq.protocolNumber = protocolNumnber;
-        /*ProtocolScanResult res = */runScanForProtocol(newReq);
-    }
-}
+//void ScanController::runProtocolScan()
+//{
+//    for(int i=0;i<totalProtocolsToScan;i++)
+//    {
+//        int protocolNumnber = this->protocolNumbersToScan[i];
+//        cout<<"Scanning Protocol :"<<protocolNumnber<<endl;
+//        ProtocolScanRequest newReq;
+//        newReq.protocolNumber = protocolNumnber;
+//        /*ProtocolScanResult res = */runScanForProtocol(newReq);
+//    }
+//}
 
 
 
@@ -611,7 +611,7 @@ void ScanController::populateProtocolNumberToScan()
     
     //by default scan protocol number from 0-255
     this->totalProtocolsToScan = 0;
-    for(int i=0;i<255;i++)
+    for(int i=0;i<256;i++)
     {
         this->protocolNumbersToScan[i]=i+1;
         this->totalProtocolsToScan++;
@@ -625,15 +625,13 @@ void ScanController::startScan()
     if(this->spawnThreads==true)
     {
         
-        //FIX: change this to change the number of workers
-        // this->totalWorkers = 3;//MAX_WORKERS;
         jobDistribution.resize(this->totalWorkers);
         for (int i=0; i<this->totalWorkers; i++) {
             jobDistribution[i].resize(3);
         }
         setUpJobsAndJobDistribution();
         scanPortsWithThread();
-        
+        cout<<"\n starting";
         //distribute work
         
     }
@@ -710,7 +708,6 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         fprintf(stderr, "Couldn't install filter %s: %s\n", filter_exp, pcap_geterr(handle));
     }
     
-    int kOffset = (isv6)?0:sizeof(struct ip);
     
     struct ip ip;
     struct udphdr udp;
@@ -725,8 +722,8 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     else
         packet = (u_char *)malloc(60);
     
-    int sz = sizeof(struct udphdr);
-    //cout<<sz;
+//    int sz = sizeof(struct udphdr);
+//    //cout<<sz;
     
     
     
@@ -977,10 +974,15 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         net = 0;
         mask = 0;
     }
-    handle = pcap_open_live(dev, 65535, 0, 3000, errBuff);
+    handle = pcap_open_live(dev, 65535, 1, 3000, errBuff);
     if (handle == NULL) {
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
     }
+    if(filter_exp[strlen(filter_exp)-1]==':')
+    {
+        filter_exp[strlen(filter_exp)-1]='\0';
+    }
+    
     if (pcap_compile(handle, &fp, filter_exp, 0, net) == -1) {
         fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(handle));
     }
@@ -1543,7 +1545,7 @@ void ScanController::scanPorts()
             
         }
         //else if job is protocol scan
-        else if(nextJob.type == kProtocolScan )
+        else if(nextJob.type == kProtocolScan && false)
         {
             if(nextJob.protocolNumber == IPPROTO_TCP)
             {
@@ -1643,14 +1645,22 @@ void ScanController::setUpJobsAndJobDistribution()
     for (int i=0; i<this->totalIpAddressToScan; i++) {
         const char *nextIp = this->allIpAddressToScan[i].c_str();
         char *srcIp;
-        if(isIpV6(nextIp))
+        if(isIpV6(nextIp) )
         {
-
-            srcIp = this->hostDevAndIp.ipv6;
+            //FIX: hardcoded
+            if(islocalhost((char*)nextIp))
+                srcIp = "::1";
+            else
+                srcIp = "2001:18e8:2:28a6:adbd:be7a:b6f5:f9b9";
+            
         }
         else
         {
-            srcIp = this->hostDevAndIp.ip;
+            
+            if(islocalhost((char*)nextIp))
+                srcIp = this->hostDevAndIp.localHost_ip;
+            else
+                srcIp = this->hostDevAndIp.ip;
         }
         totalJobs = totalJobs+this->totalPortsToScan;//+this->totalProtocolsToScan;
         //this->jobQueue.resize(totalJobs);
@@ -1674,7 +1684,6 @@ void ScanController::setUpJobsAndJobDistribution()
             newJob.scanTypeToUse[XMAS_SCAN] = this->typeOfScans[XMAS_SCAN];
             newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
             newJob.scanTypeToUse[PROTO_SCAN] = NOT_REQUIRED;
-            //allJobs[jobId]=newJob;
             jobQueue.push_back(newJob);
             jobId++;
             
@@ -1682,7 +1691,6 @@ void ScanController::setUpJobsAndJobDistribution()
         }
         
         totalJobs = totalJobs + this->totalProtocolsToScan;
-        //this->jobQueue.resize(totalJobs);
         for(int portNoIndex=0;portNoIndex<this->totalProtocolsToScan;portNoIndex++)
         {
             int proto = this->protocolNumbersToScan[portNoIndex];
@@ -1691,7 +1699,6 @@ void ScanController::setUpJobsAndJobDistribution()
             newJob.type = kProtocolScan;
             if(proto == IPPROTO_TCP || proto == IPPROTO_UDP)
             {
-                // memmove(newJob.portsForProtocolScan,this->portsToScan,this->totalPortsToScan);
                 memcpy(&newJob.portsForProtocolScan, &this->portsToScan,sizeof(int)*this->totalPortsToScan);
                 newJob.totalPortsForProtocolScan = this->totalPortsToScan;
             }
@@ -1712,7 +1719,6 @@ void ScanController::setUpJobsAndJobDistribution()
             newJob.scanTypeToUse[XMAS_SCAN] = NOT_REQUIRED;
             newJob.scanTypeToUse[UDP_SCAN] = NOT_REQUIRED;
             newJob.scanTypeToUse[PROTO_SCAN] = this->typeOfScans[PROTO_SCAN];
-            //allJobs[jobId]=newJob;
             jobQueue.push_back(newJob);
             jobId++;
             
@@ -1725,7 +1731,6 @@ void ScanController::setUpJobsAndJobDistribution()
     if(this->totalWorkers>NO_WORKERS)
     {
         //distribute work if number of workers is greater than zero
-        // int jobsPerWorker = totalJobs/MAX_WORKERS;
         int jobsPerWorker = totalJobs/this->totalWorkers;
         int temp_totalJobs = totalJobs;
         
@@ -1750,9 +1755,6 @@ void ScanController::setUpJobsAndJobDistribution()
             jobDistribution[workerId][JOB_START_INDEX] = startindex;
             jobDistribution[workerId][JOB_END_INDEX] = endindex;
             jobDistribution[workerId][JOB_CURRENT_INDEX] = NOT_STARTED;
-            //            workDistribution[workerId][JOB_START_INDEX] = startindex;
-            //            workDistribution[workerId][JOB_END_INDEX] =  endindex;
-            //            workDistribution[workerId][JOB_CURRENT_INDEX] = NOT_STARTED;
         }
         
         
@@ -1801,9 +1803,6 @@ Job  ScanController::getNextJob(int kWorkerId)
     Job nJob;
     
     
-    //    int curretJob = workDistribution[kWorkerId][JOB_CURRENT_INDEX];
-    //    int startJob = workDistribution[kWorkerId][JOB_START_INDEX];
-    //    int endJob = workDistribution[kWorkerId][JOB_END_INDEX];
     int curretJob = jobDistribution[kWorkerId][JOB_CURRENT_INDEX];
     int startJob = jobDistribution[kWorkerId][JOB_START_INDEX];
     int endJob = jobDistribution[kWorkerId][JOB_END_INDEX];
@@ -2035,7 +2034,6 @@ void ScanController::scanPortsWithThread()
     int j[this->totalWorkers];
     for (int i=0; i<this->totalWorkers; i++) {
         j[i] = i;
-        //        pthread_create(&allWorkerThreads[i], NULL, handleJob, (void*)&j[i]);
         allWorkerThreadId.resize(i+1);
         pthread_create(&allWorkerThreadId[i], NULL, handleJob, (void*)&j[i]);
         
@@ -2045,9 +2043,7 @@ void ScanController::scanPortsWithThread()
     
     for(int i=0; i<this->totalWorkers;i++)
     {
-        //        pthread_join(allWorkerThreads[i], &result);
         pthread_join(allWorkerThreadId[i], &result);
-        //cout<<"\n Exit : "<<*(int *)result;
     }
     
     pthread_mutex_destroy(&kMutex);
