@@ -1255,11 +1255,11 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             else
             {
                 if(kRequest.scanType==XMAS_SCAN)
-                    status.tcp_portState = kOpen;
+                    status.tcp_portState = kOpenORFiltered;
                 if(kRequest.scanType == NULL_SCAN)
-                    status.tcp_portState = kOpen;
+                    status.tcp_portState = kOpenORFiltered;
                 if(kRequest.scanType == FIN_SCAN)
-                    status.tcp_portState = kOpen;
+                    status.tcp_portState = kOpenORFiltered;
                 if(kRequest.scanType == SYN_SCAN)
                     status.tcp_portState = kFiltered;
                 if(kRequest.scanType == ACK_SCAN)
@@ -1337,11 +1337,11 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
             else
             {
                 if(kRequest.scanType==XMAS_SCAN)
-                    status.tcp_portState = kOpen;
+                    status.tcp_portState = kOpenORFiltered;
                 if(kRequest.scanType == NULL_SCAN)
-                    status.tcp_portState = kOpen;
+                    status.tcp_portState = kOpenORFiltered;
                 if(kRequest.scanType == FIN_SCAN)
-                    status.tcp_portState = kOpen;
+                    status.tcp_portState = kOpenORFiltered;
                 if(kRequest.scanType == SYN_SCAN)
                     status.tcp_portState = kFiltered;
                 if(kRequest.scanType == ACK_SCAN)
@@ -1359,11 +1359,11 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         else
         {
             if(kRequest.scanType==XMAS_SCAN)
-                status.tcp_portState = kOpen;
+                status.tcp_portState = kOpenORFiltered;
             if(kRequest.scanType == NULL_SCAN)
-                status.tcp_portState = kOpen;
+                status.tcp_portState = kOpenORFiltered;
             if(kRequest.scanType == FIN_SCAN)
-                status.tcp_portState = kOpen;
+                status.tcp_portState = kOpenORFiltered;
             if(kRequest.scanType == SYN_SCAN)
                 status.tcp_portState = kFiltered;
             if(kRequest.scanType == ACK_SCAN)
@@ -1375,11 +1375,11 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     else if(recPakcet==NULL)
     {
         if(kRequest.scanType==XMAS_SCAN)
-            status.tcp_portState = kOpen;
+            status.tcp_portState = kOpenORFiltered;
         if(kRequest.scanType == NULL_SCAN)
-            status.tcp_portState = kOpen;
+            status.tcp_portState = kOpenORFiltered;
         if(kRequest.scanType == FIN_SCAN)
-            status.tcp_portState = kOpen;
+            status.tcp_portState = kOpenORFiltered;
         if(kRequest.scanType == SYN_SCAN)
             status.tcp_portState = kFiltered;
         if(kRequest.scanType == ACK_SCAN)
