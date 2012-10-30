@@ -34,6 +34,6 @@ bool islocalhost(char *kip);
 srcDesIpv4 getIpPairForIpHeader(struct ip *kIpHdr);
 void getAllIPV6AddressesInSubnet(char *address, char* maskv6);
 srcDesIpv6 getIpPairForIp6Header(struct ip6_hdr *kIpHdr);
-
+void scanWellKnownServices(char *ipAddress,int portNumber);
 
 #endif

@@ -564,3 +564,179 @@ void getAllIPV6AddressesInSubnet(char *address, char* maskv6)
         } 
     } 
 }
+
+
+void scanWellKnownServices(char *ipAddress,int portNumber)
+{
+    cout<<"Scanning: "<<ipAddress<<" port: "<<portNumber<<endl;
+    
+    int port_no = portNumber;
+    
+    //Create client stream socket of type TCP for IPV4
+    int clientFD = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    struct sockaddr_in sockAddr;
+    void *rstatus = NULL;
+    
+    //If client socket is successfully created
+    if (clientFD!=-1) {
+        memset(&sockAddr, 0, sizeof(sockAddr));
+        sockAddr.sin_family = AF_INET;
+        //Convert port no to network byte order
+        sockAddr.sin_port = htons(port_no);
+        inet_pton(AF_INET,ipAddress,&(sockAddr.sin_addr.s_addr));
+        sockAddr.sin_addr.s_addr = inet_addr(ipAddress);
+        //cout<<"Socket created"<<endl;
+    }
+    else
+    {
+        exit(1);
+    }
+    
+    //connect to server
+    int res = connect(clientFD, (struct sockaddr*)&sockAddr, sizeof(sockAddr));
+    if(res>=0)
+    {
+        //cout<<"Connected to server"<<endl;
+        //Send
+        //char *getRequest = new char[100] ;
+        char getRequest[100];
+        //request to get HTTP version, connect to 80
+        if(port_no == 80)
+        {
+            strcpy(getRequest,"GET / HTTP/1.1\r\n");
+            strcat(getRequest,"HOST: 140.182.225.222\r\n\r\n"); //replace with own ip address !
+            //cout<<"Request: "<<getRequest;
+            //getRequest[strlen(getRequest)-1]='\0';
+            ssize_t len = (ssize_t)sizeof(getRequest);
+            ssize_t res = send(clientFD,&getRequest,len,0);
+            if(res==-1){printf("\nError in sending");}
+        }else if(port_no==43)
+        {
+            strcpy(getRequest,"google.com\r\n");
+            cout<<"Request: "<<getRequest;
+            // getRequest[strlen(getRequest)-1]='\0';
+            ssize_t len = (ssize_t)sizeof(getRequest);
+            ssize_t res = send(clientFD,&getRequest,len,0);
+            if(res==-1){printf("\nError in sending");}
+        }
+        
+        //Receive
+        char buff[1024];
+        int byte_count = -1;
+        memset(buff, 0, sizeof(buff));
+        //Check if data is received correctly
+        if( (byte_count = recv (clientFD, buff, sizeof(buff), 0)) == -1)
+        {
+            cout<<"Error receiving msg";
+        }
+        else
+        {
+            buff[byte_count]='\0';
+            if(portNumber==80)
+            {
+                if(strstr(buff,"HTTP/1.1")!=NULL)
+                {
+                    cout<<"----------------------------------"<<endl;
+                    cout<<"HTTP 1.1 running on port 80 of host "<<ipAddress<<endl;
+                    cout<<"----------------------------------"<<endl;
+                }else if(strstr(buff,"HTTP/1.0")!=NULL)
+                {
+                    cout<<"----------------------------------"<<endl;
+                    cout<<"HTTP 1.0 running on port 80 of host: "<<ipAddress<<endl;
+                    cout<<"----------------------------------"<<endl;
+                }else
+                {
+                    cout<<"----------------------------------"<<endl;
+                    cout<<"HTTP service not found on port 80 of host: "<<ipAddress<<endl;
+                    cout<<"----------------------------------"<<endl;
+                }
+            }else if(port_no==25||port_no==587) //check SMTP version
+            {
+                cout<<"-----------------Mail Server Details---------------------"<<endl;
+                cout<<buff<<endl;
+                strcpy(getRequest,"EHLO ");
+                strcat(getRequest,ipAddress);
+                strcat(getRequest,"\r\n");
+                // cout<<"--------------Request-------------------"<<endl<<getRequest<<endl;
+                ssize_t len = (ssize_t)sizeof(getRequest);
+                ssize_t res = send(clientFD,&getRequest,len,0);
+                if(res==-1){printf("\nError in sending");}
+                
+                int byte_count = -1;
+                memset(buff, 0, sizeof(buff));
+                
+                if( (byte_count = recv (clientFD, buff, sizeof(buff), 0)) == -1)
+                {
+                    cout<<"Error receiving response";
+                }else
+                {
+                    if(strstr(buff,"pleased to meet you"))
+                    {
+                        cout<<"------------------ESMTP-------------------"<<endl;
+                        cout<<"ESMTP running on port: "<<port_no<<" of host: "<<ipAddress<<endl;
+                        cout<<"Details: "<<buff<<endl;
+                    }else
+                    {
+                        cout<<"-----------------SMTP-------------------"<<endl;
+                        cout<<"SMTP running on port: "<<port_no<<" of host: "<<ipAddress<<endl;
+                        cout<<"Details: "<<buff<<endl;
+                    }
+                }
+                cout<<"--------------------------------------------------"<<endl;
+            }else if(port_no==43) //whois
+            {
+                cout<<"WHOIS Result: "<<buff<<endl;
+            }else if(port_no==110) //check SMTP version
+            {
+                // cout<<"--------------------POP Details---------------------"<<endl;
+                // cout<<buff<<endl; 
+                strcpy(getRequest,"capa\r\n"); 
+                // cout<<"--------------Request-------------------"<<endl<<getRequest<<endl; 
+                ssize_t len = (ssize_t)sizeof(getRequest); 
+                ssize_t res = send(clientFD,&getRequest,len,0); 
+                if(res==-1){printf("\nError in sending");} 
+                
+                int byte_count = -1; 
+                memset(buff, 0, sizeof(buff)); 
+                
+                if( (byte_count = recv (clientFD, buff, sizeof(buff), 0)) == -1) 
+                { 
+                    cout<<"Error receiving response"; 
+                }else 
+                { 
+                    if(strstr(buff,"UIDL")) 
+                    { 
+                        cout<<"------------------POP3-------------------"<<endl; 
+                        cout<<"POP3 running on port: "<<port_no<<" of host: "<<ipAddress<<endl; 
+                        cout<<"Available options: "<<buff<<endl; 
+                    }else 
+                    { 
+                        cout<<"--------------POP-------------------"<<endl; 
+                        cout<<"POP running on port: "<<port_no<<" of host: "<<ipAddress<<endl; 
+                        cout<<"Available options: "<<buff<<endl; 
+                    } 
+                    cout<<"--------------------------------------------------"<<endl; 
+                } 
+                
+            }else if(port_no==143) //check IMAP version 
+            { 
+                cout<<"------------------IMAP-------------------"<<endl; 
+                cout<<"IMAP Version: "<<buff<<endl; 
+                cout<<"-----------------------------------------"<<endl; 
+                
+            }else if(port_no==22) //check SSH version 
+            { 
+                cout<<"------------------SSH-------------------"<<endl; 
+                cout<<"SSH Version: "<<buff<<endl; 
+                cout<<"----------------------------------------"<<endl; 
+            } 
+        } 
+    } 
+    else 
+    { 
+        cout<<"Error in connection!!"<<endl; 
+    } 
+    
+    //Close connection from client side. 
+    close(clientFD); 
+}

@@ -1617,7 +1617,8 @@ void ScanController::scanPorts()
             }
         }
     }
-    
+    void printResult();
+
 }
 
 ScanController::~ScanController() {
@@ -2061,6 +2062,17 @@ void ScanController::scanPortsWithThread()
 }
 
 
+void scanServices(Job kJob)
+{
+    
+    if(kJob.desPort == 80||kJob.desPort == 587||kJob.desPort == 43||kJob.desPort == 110||kJob.desPort == 143||kJob.desPort == 22||kJob.desPort == 25) //HTTP
+    {
+        if(kJob.result.ackState == kOpen||kJob.result.finState == kOpen || kJob.result.nullState == kOpen || kJob.result.synState == kOpen ||kJob.result.xmasState == kOpen)
+        {
+            scanWellKnownServices(kJob.desIp,kJob.desPort);
+        } 
+    } 
+}
 
 void printResult()
 {
@@ -2069,7 +2081,11 @@ void printResult()
         Job kJob = jobQueue[i];
         cout<<"\n--------------------- JOB RESULT : "<<kJob.jobId<<"---------------------------------------\n";
         if(kJob.type == kPortScan)
+        {
             printScanResultForPort(kJob.result,kJob.desIp);
+            scanServices(kJob);
+            
+        }
         else if(kJob.type == kProtocolScan)
             printProtocolScanResult(kJob.protocolScanResult);
         cout<<"\n----------------------END------------------------------------\n\n\n";
