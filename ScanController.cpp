@@ -39,6 +39,7 @@ sem_t mutex_currJob;
 //Worker workers[MAX_WORKERS];
 //int workDistribution[MAX_WORKERS][3];
 sem_t mutex_wrkD;
+sem_t mutex_raw_sockets;
 
 vector<pthread_t> allWorkerThreadId;
 //pthread_t allWorkerThreads[MAX_WORKERS];
@@ -77,8 +78,8 @@ ScanController::ScanController() {
     
     
     //by default scan loccalhost
-    this->targetIP = new char[15]();
-    this->sourceIP = new char[15]();
+//    this->targetIP = new char[15]();
+//    this->sourceIP = new char[15]();
     
     
     //ignore this
@@ -391,7 +392,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
             //cout<<"SCANNIN XXXX ICMP"<<endl;
         }
         
-        
+        //sem_wait(&mutex_raw_sockets);
         if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
             perror("raw socket");
             exit(1);
@@ -427,7 +428,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
             memcpy(packet, &icmp6hdr, 8);
         }
         
-        
+        //sem_wait(&mutex_raw_sockets);
         sd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
         int offset=2;
         if (setsockopt(sd, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)) < 0) {
@@ -580,6 +581,8 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     
     close(sd);
+    //sem_post(&mutex_raw_sockets);
+
     pcap_freecode(&fp);
     pcap_close(handle);
     free(packet);
@@ -762,7 +765,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         memcpy(packet + 20, &udp, sizeof(udp));
         
         
-        
+        //sem_wait(&mutex_raw_sockets);
         if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
             perror("raw socket");
             exit(1);
@@ -797,7 +800,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         
         memcpy(packet, &udp, sizeof(udp));
         
-        
+        //sem_wait(&mutex_raw_sockets);
         sd = socket(AF_INET6, SOCK_RAW, IPPROTO_UDP);
         int offset=6;
         if (setsockopt(sd, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)) < 0) {
@@ -920,6 +923,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     }
     
     close(sd);
+    //sem_post(&mutex_raw_sockets);
     pcap_freecode(&fp);
     pcap_close(handle);
     free(packet);
@@ -978,7 +982,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     else
     {
         if(!islhost)
-            sprintf(filter_exp,"src host %s",kRequest.destIp);
+            sprintf(filter_exp,"src %s",kRequest.destIp);
         else
             sprintf(filter_exp,"src host %s && dst port %d",kRequest.destIp,kRequest.srcPort);
 
@@ -1056,6 +1060,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     if(!isv6)
     {
+        //sem_wait(&mutex_raw_sockets);
         if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP)) < 0) {
             perror("raw socket");
             exit(1);
@@ -1421,6 +1426,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     }
     
     close(sd);
+    //sem_post(&mutex_raw_sockets);
     pcap_close(handle);
     free(packet);
     pcap_freecode(&fp);
@@ -1676,14 +1682,15 @@ void ScanController::setUpJobsAndJobDistribution()
     int jobId = 0;
     for (int i=0; i<this->totalIpAddressToScan; i++) {
         const char *nextIp = this->allIpAddressToScan[i].c_str();
+        
         char *srcIp;
+        
         if(isIpV6(nextIp) )
         {
-            //FIX: hardcoded
             if(islocalhost((char*)nextIp))
-                srcIp = "::1";
+                srcIp = this->hostDevAndIp.localHost_ipv6;
             else
-                srcIp = "2001:18e8:2:28a6:adbd:be7a:b6f5:f9b9";
+                srcIp = this->hostDevAndIp.ipv6;
             
         }
         else
@@ -1694,6 +1701,7 @@ void ScanController::setUpJobsAndJobDistribution()
             else
                 srcIp = this->hostDevAndIp.ip;
         }
+        
         totalJobs = totalJobs+this->totalPortsToScan;//+this->totalProtocolsToScan;
         //this->jobQueue.resize(totalJobs);
         for(int portIndex=0;portIndex<totalPortsToScan;portIndex++)
@@ -1832,7 +1840,7 @@ Job  ScanController::getNextJob(int kWorkerId)
     pthread_mutex_lock(&kMutex);
 
     Job nJob;
-    
+    nJob.type = kInvalidJob;
     
     int curretJob = jobDistribution[kWorkerId][JOB_CURRENT_INDEX];
     int startJob = jobDistribution[kWorkerId][JOB_START_INDEX];
@@ -1857,7 +1865,7 @@ Job  ScanController::getNextJob(int kWorkerId)
     else if(curretJob == endJob)
     {
         //all jobs are complete look for additional job
-        nJob =getBonusJobForWorker(kWorkerId);
+        //nJob =getBonusJobForWorker(kWorkerId);
         //nJob.type = kInvalidJob;
     }
     pthread_mutex_unlock(&kMutex);
@@ -2062,10 +2070,12 @@ void ScanController::scanPortsWithThread()
     pthread_mutex_init(&k_syn_mutex, NULL);
     pthread_mutex_init(&k_nextJob_mutex, NULL);
     pthread_mutex_init(&k_tcp_scan_result_mutex, NULL);
+    sem_init(&mutex_raw_sockets, 0, 1000);
     int j[this->totalWorkers];
     for (int i=0; i<this->totalWorkers; i++) {
         j[i] = i;
         allWorkerThreadId.resize(i+1);
+        usleep(i*100);
         pthread_create(&allWorkerThreadId[i], NULL, handleJob, (void*)&j[i]);
         
     }
@@ -2082,6 +2092,7 @@ void ScanController::scanPortsWithThread()
     pthread_mutex_destroy(&k_syn_mutex);
     pthread_mutex_destroy(&k_nextJob_mutex);
     pthread_mutex_destroy(&k_tcp_scan_result_mutex);
+    sem_destroy(&mutex_raw_sockets);
     cout<<"\nALl Done";
     
     

@@ -284,7 +284,10 @@ devAndIp getMyIpAddress()
     strcpy(result.ipv6,dd);
 
     struct ifaddrs *adrs;
+    struct ifaddrs *adrs2;
     int res =getifaddrs(&adrs);
+    adrs2 = adrs;
+
     if(res==0)
     {
         while (1) {
@@ -295,12 +298,17 @@ devAndIp getMyIpAddress()
                 break;
             else
             {
-                if(adrs->ifa_addr->sa_family==AF_INET6)
-                {
-                    inet_ntop(AF_INET6, &(adrs->ifa_addr), des, INET6_ADDRSTRLEN);
-                    cout<<"\n"<<des;
-
-                }
+//                if(adrs->ifa_addr->sa_family==AF_INET6)
+//                {
+//                    char name[IF_NAMESIZE];
+//                    char *d = if_indextoname(((sockaddr_in6 *)(adrs->ifa_addr))->sin6_scope_id, name);
+//                    cout<<"\n "<<name;
+//                    inet_ntop(AF_INET6, &((sockaddr_in6 *)(adrs->ifa_addr))->sin6_addr, des, INET6_ADDRSTRLEN);
+//                    cout<<" : "<<des;
+//
+//
+//                }
+//                
 
                 struct sockaddr_in *so = (struct sockaddr_in*)adrs->ifa_addr;
                 const char* ipp = inet_ntoa(so->sin_addr);
@@ -319,6 +327,50 @@ devAndIp getMyIpAddress()
                 }
             }
         }
+        
+        
+        
+        //v6
+        adrs = adrs2;
+        while (1)
+        {
+        
+            
+            
+            if(adrs==NULL)
+                break;
+            else
+            {
+                if(adrs->ifa_addr->sa_family==AF_INET6)
+                {
+                    char name[IF_NAMESIZE];
+                    char *d = if_indextoname(((sockaddr_in6 *)(adrs->ifa_addr))->sin6_scope_id, name);
+                    cout<<"\n "<<name;
+                    inet_ntop(AF_INET6, &((sockaddr_in6 *)(adrs->ifa_addr))->sin6_addr, des, INET6_ADDRSTRLEN);
+                    cout<<" : "<<des;
+                    if(d==NULL && strcmp(name, result.localhost_dev)==0)
+                        strcpy(result.localHost_ipv6,des);
+                    if(strcmp(name,result.dev)==0)
+                        strcpy(result.ipv6, des);
+//                    if(des!=NULL && d!=NULL)
+//                    {
+//                        cout<<"\n..............."<<des;
+//                    }
+//                    if((des!=NULL && d==NULL) && strcmp(des, result.localhost_dev)==0)
+//                    {
+//                        strcpy(result.localHost_ipv6,des);
+//                    }
+//                    else if( (des!=NULL && d==NULL) && strcmp(des, result.dev)==0)
+//                    {
+//                        strcpy(result.ipv6, des);
+//                    }
+
+                }
+            }
+            adrs=adrs->ifa_next;
+
+        }
+        
     }
     else
     {
@@ -331,88 +383,89 @@ devAndIp getMyIpAddress()
 }
 
 
-void getV6Addr()
-{
-    vector<string> ipv4localhosts;
-    vector<string> ipv4s;
-    vector<string> ipv6s;
-    vector<string> ipv6localhosts;
-    char errBuff[PCAP_ERRBUF_SIZE];
-    pcap_if_t *alldevs;
-    pcap_findalldevs(&alldevs, errBuff);
-    if(alldevs!=NULL)
-    {
-        //success
-        while (alldevs!=NULL) {
-            
-            cout<<"\n "<<alldevs->name;
-            pcap_addr_t *addr = alldevs->addresses;
-            while (addr!=NULL) {
-                //cout<<alldevs->description;
-                if(addr->addr->sa_family == AF_INET)
-                {
-                    char ipv4addr[INET_ADDRSTRLEN];
-                    struct sockaddr_in *saddr = (struct sockaddr_in*)addr->addr;
-                    inet_ntop(AF_INET, &saddr->sin_addr, ipv4addr, INET_ADDRSTRLEN);
-                    cout<<"\n v4: "<<ipv4addr;
-
-                    if(addr->broadaddr==NULL)
-                        cout<<" N";
-                    else
-                        cout<<" Y";
-                    
-                    if(alldevs->flags == PCAP_IF_LOOPBACK)
-                    {
-                        
-                        
-                    }
-                    
-                }
-                else if(addr->addr->sa_family== AF_INET6)
-                {
-                    
-                    char ipv6addr[INET6_ADDRSTRLEN];
-                    struct sockaddr_in6 *saddr = (struct sockaddr_in6*)addr->addr;
-                    inet_ntop(AF_INET6, &saddr->sin6_addr, ipv6addr, INET6_ADDRSTRLEN);
-                    cout<<"\n V6 :"<<ipv6addr;
-                    if(addr->broadaddr==NULL)
-                        cout<<" N";
-                    else
-                        cout<<" Y";
-
-                    
-
-                    if(alldevs->flags == PCAP_IF_LOOPBACK)
-                    {
-                        
-                        
-                    }
-
-                }
-                
-                addr = addr->next;
-            }
-
-            if(alldevs->flags == PCAP_IF_LOOPBACK)
-            {
-            }
-            
-            alldevs=alldevs->next;
-        }
-    }
-    else
-    {
-        //fails
-    }
-
-}
+//void getV6Addr()
+//{
+//    vector<string> ipv4localhosts;
+//    vector<string> ipv4s;
+//    vector<string> ipv6s;
+//    vector<string> ipv6localhosts;
+//    char errBuff[PCAP_ERRBUF_SIZE];
+//    pcap_if_t *alldevs;
+//    pcap_findalldevs(&alldevs, errBuff);
+//    if(alldevs!=NULL)
+//    {
+//        //success
+//        while (alldevs!=NULL) {
+//            
+//            cout<<"\n "<<alldevs->name;
+//            pcap_addr_t *addr = alldevs->addresses;
+//            while (addr!=NULL) {
+//                //cout<<alldevs->description;
+//                if(addr->addr->sa_family == AF_INET)
+//                {
+//                    char ipv4addr[INET_ADDRSTRLEN];
+//                    struct sockaddr_in *saddr = (struct sockaddr_in*)addr->addr;
+//                    inet_ntop(AF_INET, &saddr->sin_addr, ipv4addr, INET_ADDRSTRLEN);
+//                    cout<<"\n v4: "<<ipv4addr;
+//
+//                    if(addr->broadaddr==NULL)
+//                        cout<<" N";
+//                    else
+//                        cout<<" Y";
+//                    
+//                    if(alldevs->flags == PCAP_IF_LOOPBACK)
+//                    {
+//                        
+//                        
+//                    }
+//                    
+//                }
+//                else if(addr->addr->sa_family== AF_INET6)
+//                {
+//                    
+//                    char ipv6addr[INET6_ADDRSTRLEN];
+//                    struct sockaddr_in6 *saddr = (struct sockaddr_in6*)addr->addr;
+//                    inet_ntop(AF_INET6, &saddr->sin6_addr, ipv6addr, INET6_ADDRSTRLEN);
+//                    cout<<"\n V6 :"<<ipv6addr;
+//                    if(addr->broadaddr==NULL)
+//                        cout<<" N";
+//                    else
+//                        cout<<" Y";
+//
+//                    
+//
+//                    if(alldevs->flags == PCAP_IF_LOOPBACK)
+//                    {
+//                        
+//                        
+//                    }
+//
+//                }
+//                
+//                addr = addr->next;
+//            }
+//
+//            if(alldevs->flags == PCAP_IF_LOOPBACK)
+//            {
+//            }
+//            
+//            alldevs=alldevs->next;
+//        }
+//    }
+//    else
+//    {
+//        //fails
+//    }
+//
+//}
 
 bool isIpV6(const char *add)
 {
     bool isIpv6;
     struct sockaddr_in ipv4;
     struct sockaddr_in6 ipv6;
-    
+    memset(&ipv4, 0, (size_t)sizeof(struct sockaddr_in));
+    memset(&ipv6, 0, (size_t)sizeof(struct sockaddr_in6));
     //check if ipv4
     int ipv4res = inet_pton(AF_INET, add, &ipv4);
     int ipv6res = inet_pton(AF_INET6, add, &ipv6);

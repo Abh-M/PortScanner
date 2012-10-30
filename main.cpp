@@ -16,16 +16,6 @@ using namespace std;
 
 int main(int argc, const char * argv[])
 {
-    //    char *ipv6 = "2001:18e8:2:28a6:462a:60ff:fef3:c6ae";
-    //    char *mask = "126";
-    //    getAllIPV6AddressesInSubnet(ipv6, mask);
-    //    return 0;
-    
-    
-    getV6Addr();
-    //return 0;
-    //getMyIpAddress();
-    //return 0;
     
     //create scan controller with default parameters
 	ScanController *con =  ScanController::shared();
@@ -280,7 +270,6 @@ int main(int argc, const char * argv[])
     
     con->populateIpAddressToScan(allIPaddress);
     cout<<"\n Total Ip address"<<allIPaddress.size();
-    con->sourceIP = "2001:18e8:2:28a6:adbd:be7a:b6f5:f9b9";
     time_t start, end;
     double diff=0;
     time(&start);
