@@ -429,7 +429,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         }
         
         //sem_wait(&mutex_raw_sockets);
-        sd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+        sd = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
         int offset=2;
         if (setsockopt(sd, IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)) < 0) {
             perror("setsockopt");
