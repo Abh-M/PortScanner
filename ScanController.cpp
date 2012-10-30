@@ -318,12 +318,12 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     char filter_exp[256];
     if(isv6)
     {
-        sprintf(filter_exp,"icmp6 && src host %s",req.destIp);
+        sprintf(filter_exp,"icmp6 && src host %s && ip6[40] != 128",req.destIp);
         
     }
     else
     {
-        sprintf(filter_exp,"icmp && src host %s",req.destIp);
+        sprintf(filter_exp,"icmp && src host %s && icmp[icmptype] != icmp-echo ",req.destIp);
     }
     
     //cout<<"\n FILTER EXP "<<filter_exp;
@@ -480,25 +480,34 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         {
             //icmpv6
             //TODO : hardcoded value of 6 is for localhost need to fix this
-            struct ip6_hdr *ip6 = (struct ip6_hdr*)(recPakcet+14);
+            struct ip6_hdr *ip6 = (struct ip6_hdr*)(recPakcet+eth_fr_size);
             logIP6Header(ip6);
+            int payload = ntohs(ip6->ip6_ctlun.ip6_un1.ip6_un1_plen);
             srcDesIpv6 ipPair = getIpPairForIp6Header(ip6);
             if(  ((strcmp(ipPair.src, req.destIp))==0) && ((strcmp(ipPair.des, req.sourceIp))==0) )
             {
                 //FIX: 14 is inconsistent
-                struct icmp6_hdr *icmp6 = (struct icmp6_hdr*)(recPakcet+14+40);
+                struct icmp6_hdr *icmp6 = (struct icmp6_hdr*)(recPakcet+eth_fr_size+40);
                 logICMP6Header(icmp6);
                 //check if reply
                 if((unsigned short)icmp6->icmp6_type==ICMP6_ECHO_REPLY){
                     //set status
                     result.icmp_type = (unsigned short)icmp6->icmp6_type;
                     result.icmp_type = (unsigned short)icmp6->icmp6_code;
-                    
+                    result.protocolSupported = true;
                 }
                 else//analyze payload
                 {
-                    struct ip6_hdr *inner_ip6 = (struct ip6_hdr*)(recPakcet+14+40+8);
-                    logIP6Header(inner_ip6);
+                    if( payload > (sizeof(struct ip6_hdr)+ sizeof(struct icmp6_hdr) ))
+                    {
+                        struct ip6_hdr *inner_ip6 = (struct ip6_hdr*)(recPakcet+eth_fr_size+40+8);
+                        logIP6Header(inner_ip6);
+                        
+                    }
+                    else
+                    {
+                        //something else
+                    }
                     //                struct udphdr *inner_udp = (struct udphdr*)(recPakcet+4+40+8+40);
                     //                if(kRequest.srcPort == ntohs(inner_udp->uh_sport)&&(kRequest.destPort)==ntohs(inner_udp->uh_dport))
                     //                {
@@ -571,7 +580,9 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     
     close(sd);
+    pcap_freecode(&fp);
     pcap_close(handle);
+    free(packet);
     return result;
     
 }
@@ -1787,34 +1798,33 @@ void ScanController::setUpJobsAndJobDistribution()
 }
 
 
-//Job getBonusJobForWorker(int kWorkerId)
-//{
-//    Job nJob;
-//    Job *nextJob = NULL;
-//    for(int wkr=0;wkr<MAX_WORKERS;wkr++)
-//    {
-//        if(kWorkerId!=wkr)
-//            //look for pending jobs of other workers
-//        {
-//            int currJob = workDistribution[wkr][JOB_CURRENT_INDEX];
-//            int startJob = workDistribution[wkr][JOB_START_INDEX];
-//            int endJob = workDistribution[wkr][JOB_END_INDEX];
-//            if(currJob<endJob)
-//            {
-//                if(currJob==-1)
-//                    currJob = startJob;
-//                else
-//                    currJob++;
-//                nJob = allJobs[currJob];
-//                //nextJob = &nJob;
-//                workDistribution[wkr][JOB_CURRENT_INDEX] = currJob;
-//                break;
-//            }
-//        }
-//    }
-//    return nJob;
-//
-//}
+Job getBonusJobForWorker(int kWorkerId)
+{
+    Job nJob;
+
+    for(int wkr=0;wkr<MAX_WORKERS;wkr++)
+    {
+        if(kWorkerId!=wkr)
+            //look for pending jobs of other workers
+        {
+            int currJob = jobDistribution[wkr][JOB_CURRENT_INDEX];
+            int startJob = jobDistribution[wkr][JOB_START_INDEX];
+            int endJob = jobDistribution[wkr][JOB_END_INDEX];
+            if(currJob<endJob)
+            {
+                if(currJob==-1)
+                    currJob = startJob;
+                else
+                    currJob++;
+                nJob = jobQueue[currJob];
+                jobDistribution[wkr][JOB_CURRENT_INDEX] = currJob;
+                break;
+            }
+        }
+    }
+    return nJob;
+
+}
 
 
 Job  ScanController::getNextJob(int kWorkerId)
@@ -1847,8 +1857,8 @@ Job  ScanController::getNextJob(int kWorkerId)
     else if(curretJob == endJob)
     {
         //all jobs are complete look for additional job
-        //nextJob =getBonusJobForWorker(kWorkerId);
-        nJob.type = kInvalidJob;
+        nJob =getBonusJobForWorker(kWorkerId);
+        //nJob.type = kInvalidJob;
     }
     pthread_mutex_unlock(&kMutex);
     
