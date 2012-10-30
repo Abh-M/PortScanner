@@ -33,7 +33,6 @@ public:
     
 	bool spawnThreads;
 	
-    bool scanLocalhost;
     
 	char *targetIP;
 	char *sourceIP;

@@ -67,23 +67,17 @@ ScanController::ScanController() {
     
     
     //by default run all type of scans
-    //knobs to configure type of scans
     this->typeOfScans[SYN_SCAN]=1;
-    this->typeOfScans[NULL_SCAN]=0;
-    this->typeOfScans[FIN_SCAN]=0;
-    this->typeOfScans[XMAS_SCAN]=0;
-    this->typeOfScans[ACK_SCAN]=0;
-    this->typeOfScans[PROTO_SCAN]=0;
+    this->typeOfScans[NULL_SCAN]=1;
+    this->typeOfScans[FIN_SCAN]=1;
+    this->typeOfScans[XMAS_SCAN]=1;
+    this->typeOfScans[ACK_SCAN]=1;
+    this->typeOfScans[PROTO_SCAN]=1;
     this->typeOfScans[UDP_SCAN]=0;
     
     
-    //by default scan loccalhost
-//    this->targetIP = new char[15]();
-//    this->sourceIP = new char[15]();
     
     
-    //ignore this
-    this->scanLocalhost = true;
     
     //by default no thread spawning
     this->spawnThreads = false;
@@ -195,9 +189,10 @@ void ScanController::populatePortsList()
 void ScanController::populateIpAddressToScan()
 {
     this->allIpAddressToScan.push_back(this->hostDevAndIp.localHost_ip);
-    this->devString = this->hostDevAndIp.localhost_dev;
     this->totalIpAddressToScan = (int)this->allIpAddressToScan.size();
+    this->devString = this->hostDevAndIp.localhost_dev;
     this->sourceIP = this->hostDevAndIp.localHost_ip;
+    this->targetIP = this->hostDevAndIp.localHost_ip;
 }
 
 
@@ -550,17 +545,6 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
 }
 
-//void ScanController::runProtocolScan()
-//{
-//    for(int i=0;i<totalProtocolsToScan;i++)
-//    {
-//        int protocolNumnber = this->protocolNumbersToScan[i];
-//        cout<<"Scanning Protocol :"<<protocolNumnber<<endl;
-//        ProtocolScanRequest newReq;
-//        newReq.protocolNumber = protocolNumnber;
-//        /*ProtocolScanResult res = */runScanForProtocol(newReq);
-//    }
-//}
 
 
 
@@ -598,23 +582,36 @@ void ScanController::startScan()
     //route according to spawn threads flag
     if(this->spawnThreads==true)
     {
-        
+        //distribute work
+
         jobDistribution.resize(this->totalWorkers);
         for (int i=0; i<this->totalWorkers; i++) {
             jobDistribution[i].resize(3);
         }
         setUpJobsAndJobDistribution();
-        scanPortsWithThread();
-        cout<<"\n starting";
-        //distribute work
+        if(totalJobs>0)
+            scanPortsWithThread();
+        else
+        {
+            cout<<"\nno jobs";
+            exit(1);
+        }
+
         
     }
     else if(this->spawnThreads == false)
     {
+        //dont distribute work
+
         this->totalWorkers = NO_WORKERS;
         setUpJobsAndJobDistribution();
-        scanPorts();
-        //dont distribute work
+        if(totalJobs>0)
+            scanPorts();
+        else
+        {
+            cout<<"\nno jobs";
+            exit(1);
+        }
         
     }
     
@@ -1726,37 +1723,43 @@ void ScanController::setUpJobsAndJobDistribution()
     cout<<"\n Total Jobs"<<totalJobs;
     
     
-    if(this->totalWorkers>NO_WORKERS)
+    if(totalJobs>0)
     {
-        //distribute work if number of workers is greater than zero
-        int jobsPerWorker = totalJobs/this->totalWorkers;
-        int temp_totalJobs = totalJobs;
-        
-        for (int workerId =0; workerId<this->totalWorkers; workerId++) {
-            Worker newWorker;
-            newWorker.workerId = workerId;
+        if(this->totalWorkers>NO_WORKERS)
+        {
+            //distribute work if number of workers is greater than zero
+            int jobsPerWorker = totalJobs/this->totalWorkers;
+            int temp_totalJobs = totalJobs;
             
-            int startindex = workerId*jobsPerWorker;
-            int endindex=-1;
-            
-            if(workerId==(this->totalWorkers-1))//last worker check  remaining jobs
-            {
-                endindex = totalJobs-1;
-                temp_totalJobs = temp_totalJobs - temp_totalJobs;
+            for (int workerId =0; workerId<this->totalWorkers; workerId++) {
+                Worker newWorker;
+                newWorker.workerId = workerId;
+                
+                int startindex = workerId*jobsPerWorker;
+                int endindex=-1;
+                
+                if(workerId==(this->totalWorkers-1))//last worker check  remaining jobs
+                {
+                    endindex = totalJobs-1;
+                    temp_totalJobs = temp_totalJobs - temp_totalJobs;
+                }
+                else
+                {
+                    endindex = startindex + jobsPerWorker-1;
+                    temp_totalJobs = temp_totalJobs - jobsPerWorker;
+                }
+                
+                jobDistribution[workerId][JOB_START_INDEX] = startindex;
+                jobDistribution[workerId][JOB_END_INDEX] = endindex;
+                jobDistribution[workerId][JOB_CURRENT_INDEX] = NOT_STARTED;
             }
-            else
-            {
-                endindex = startindex + jobsPerWorker-1;
-                temp_totalJobs = temp_totalJobs - jobsPerWorker;
-            }
             
-            jobDistribution[workerId][JOB_START_INDEX] = startindex;
-            jobDistribution[workerId][JOB_END_INDEX] = endindex;
-            jobDistribution[workerId][JOB_CURRENT_INDEX] = NOT_STARTED;
+            
         }
-        
+
         
     }
+    
     
     
     

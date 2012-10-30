@@ -267,9 +267,10 @@ int main(int argc, const char * argv[])
     
     
     
+    if(allIPaddress.size()>0)
+        con->populateIpAddressToScan(allIPaddress);
     
-    con->populateIpAddressToScan(allIPaddress);
-    cout<<"\n Total Ip address"<<allIPaddress.size();
+    //FIX : remove this
     time_t start, end;
     double diff=0;
     time(&start);

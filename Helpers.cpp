@@ -347,9 +347,9 @@ devAndIp getMyIpAddress()
                 {
                     char name[IF_NAMESIZE];
                     char *d = if_indextoname(((sockaddr_in6 *)(adrs->ifa_addr))->sin6_scope_id, name);
-                    cout<<"\n "<<name;
+//                    cout<<"\n "<<name;
                     inet_ntop(AF_INET6, &((sockaddr_in6 *)(adrs->ifa_addr))->sin6_addr, des, INET6_ADDRSTRLEN);
-                    cout<<" : "<<des;
+//                    cout<<" : "<<des;
                     if(d==NULL && strcmp(name, result.localhost_dev)==0)
                         strcpy(result.localHost_ipv6,des);
                     if(strcmp(name,result.dev)==0)
