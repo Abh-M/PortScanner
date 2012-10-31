@@ -232,6 +232,13 @@ int main(int argc, const char * argv[])
 				}
 			}
 		}
+        if((strstr(param, ARG_TIMEOUT))!=NULL)
+        {
+            strtok((char *)param, valueSeperator);
+            char* timeoutInterval = strtok((char *)NULL, valueSeperator);
+            if(timeoutInterval!=NULL);
+                con->defaultTimeout=atoi(timeoutInterval);
+        }
         
         if((strstr(param,ARG_PROTO))!=NULL)
         {
@@ -313,7 +320,7 @@ int main(int argc, const char * argv[])
     con->startScan();
     time(&end);
     diff = difftime(end, start);
-    cout<<diff;
+    cout<<"\n Total time elapsed "<<diff<<" seconds";
 	return 0;
 }
 

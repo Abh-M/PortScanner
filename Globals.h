@@ -53,7 +53,7 @@
 //FIX: change
 #define ARG_PROTO "--pr"
 #define ARG_IP "--ip"
-
+#define ARG_TIMEOUT "--timeout"
 
 #define HELP_FILE "help.txt"
 #define SUBNET_IP_FILE "subnetips.txt"

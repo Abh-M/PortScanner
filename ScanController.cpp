@@ -142,9 +142,9 @@ void ScanController::populatePortsList(int kStart, int kEnd)
         this->portsToScan[this->totalPortsToScan++]=port;
     }
     cout<<this->totalPortsToScan;
-    for (int i=0; i<this->totalPortsToScan;i++) {
-        cout<<"\n PORT : "<<this->portsToScan[i];
-    }
+//    for (int i=0; i<this->totalPortsToScan;i++) {
+//        cout<<"\n PORT : "<<this->portsToScan[i];
+//    }
     
 }
 
@@ -242,7 +242,8 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     result.icmp_code = INVALID_CODE;
     result.icmp_type = INVALID_TYPE;
     
-    
+    cout<<"\n Starting Protocol Scan scan for  IP :"<<req.destIp<<" Protocol Number: "<<req.protocolNumber;
+
     bool isv6 = isIpV6(req.destIp);
     
     
@@ -634,7 +635,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     status.destIp = kRequest.destIp;
     status.udp_portState = kUnkown;
     
-    
+    cout<<"\n Starting UDP scan for  IP :"<<kRequest.destIp<<" Port: "<<kRequest.destPort;
     bool isv6= isIpV6(kRequest.destIp);
     bool islhost = islocalhost(kRequest.destIp);
 
@@ -805,8 +806,6 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     
     if(recPakcet!=NULL)
     {
-        cout<<"\nGOt UDP Packet response\n";
-        printf("\nJacked a packet with length of [%d]\n", header.caplen);
         //check for icmp or icmpv6 depending
         if(isv6){
             //icmpv6
@@ -869,11 +868,11 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
                 else if((unsigned int)iph->ip_p == IPPROTO_UDP)
                 {
                     //FIX:
-                    cout<<"\n got upd for udp request";
+                    cout<<"\n got udp response for udp request";
                 }
                 else
                 {
-                    cout<<"\n got response for udp but unknown protocol";
+                    cout<<"\n got response for udp requesr but unknown protocol";
                     //status.udp_portState = kOpenORFiltered;
                 }
                 
@@ -881,7 +880,7 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
             }
             else
             {
-                cout<<"\n got udp response but not for me";
+                cout<<"\n Got udp response";
             }
             
         }
@@ -914,9 +913,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     status.destIp = kRequest.destIp;
     status.tcp_portState = kUnkown;
     
-    
-    //TODO: run ipv6 scan for and implementation of icmp6
-    
+    cout<<"\n Starting TCP scan for  IP :"<<kRequest.destIp<<" Port: "<<kRequest.destPort;
     
     
     bool isv6=isIpV6(kRequest.destIp);
@@ -1292,7 +1289,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
                 unsigned int code = (unsigned int)icmph->icmp_code;
                 unsigned int type = (unsigned int)icmph->icmp_type;
                 //                cout<<endl<<"----";
-                cout<<"\n Correct ICMP ";
+                cout<<"\n Valid ICMP recieved";
                 logICMPHeader(icmph);
                 switch (kRequest.scanType)
                 {
@@ -1425,7 +1422,7 @@ ScanRequest createScanRequestFor(int srcPort, int destPort, char *srcIp, char *d
 
 void printScanResultForPort(AllScanResultForPort kResult, const char *ip)
 {
-    cout<<"\n Scan Result IP : "<<ip<<" PORT : "<<kResult.portNo;
+    cout<<"\nTCP Scan Result >> IP : "<<ip<<" PORT : "<<kResult.portNo;
     cout<<" |SYN  : "<<getStringForPortState(kResult.synState);
     cout<<" |ACK  : "<<getStringForPortState(kResult.ackState);
     cout<<" |NULL : "<<getStringForPortState(kResult.nullState);
@@ -1436,14 +1433,13 @@ void printScanResultForPort(AllScanResultForPort kResult, const char *ip)
 
 void printProtocolScanResult(ProtocolScanResult kResult)
 {
-    //cout<<endl<<"-----------------------------------------"<<endl;
     if(kResult.protocolNumber== IPPROTO_UDP)
     {
         for(int i=0; i<kResult.totalPortsScannedForProtocol;i++)
         {
             
             AllScanResult res =  kResult.tcpOrUdpPortScans.udpPortsScanResult[i];
-            cout<<"\n UDP PROTO SCAN PORT:"<<res.portNo<<" | "<<getStringForPortState(res.udpState);
+            cout<<"\nUDP Protocol Scan Result >>  PORT:"<<res.portNo<<" | "<<getStringForPortState(res.udpState);
         }
     }
     else if(kResult.protocolNumber ==IPPROTO_TCP)
@@ -1452,14 +1448,14 @@ void printProtocolScanResult(ProtocolScanResult kResult)
         {
             
             AllScanResult res =  kResult.tcpOrUdpPortScans.tcpProtoPortsScanResult[i];
-            cout<<"\n TCP PROTO SCAN PORT:"<<res.portNo<<" | "<<getStringForPortState(res.synState);
+            cout<<"\nTCP Protocol Scan Result >> PORT:"<<res.portNo<<" | "<<getStringForPortState(res.synState);
             
         }
         
     }
     else
     {
-        cout<<"\nProtocol Number : "<<kResult.protocolNumber;
+        cout<<"\nProtocol Scan result Number >> "<<kResult.protocolNumber;
         if(kResult.icmp_type != INVALID_TYPE && kResult.icmp_code != INVALID_CODE)
             cout<<"\n ICMP type: "<<kResult.icmp_type<<" code :"<<kResult.icmp_code;
         if(kResult.protocolSupported)
@@ -1469,7 +1465,6 @@ void printProtocolScanResult(ProtocolScanResult kResult)
         
         
     }
-    //cout<<endl<<"\n-----------------------------------------"<<endl;
     
     
 }
@@ -1643,7 +1638,7 @@ ScanController* ScanController::shared()
 
 void ScanController::setUpJobsAndJobDistribution()
 {
-    
+    cout<<"\n Setting job queue.....";
     totalJobs = 0;
     int jobId = 0;
     for (int i=0; i<this->totalIpAddressToScan; i++) {
@@ -1731,7 +1726,7 @@ void ScanController::setUpJobsAndJobDistribution()
         }
         
     }
-    cout<<"\n Total Jobs"<<totalJobs;
+    cout<<"\n Total Jobs : "<<totalJobs;
     
     
     if(totalJobs>0)
@@ -1836,7 +1831,6 @@ Job*  ScanController::getNextJob(int kWorkerId)
                         currJob++;
                     nJob = &jobQueue[currJob];
                     jobDistribution[wkr][JOB_CURRENT_INDEX] = currJob;
-                    cout<<"\n...................lllllll..................\n";
                     break;
                 }
             }
@@ -1853,15 +1847,11 @@ void submitJob(Job kJob)
 {
     
     pthread_mutex_lock(&kMutex);
-    cout<<"\n--------------------- START---------------------------------------\n";
-    cout<<"Submitting Job "<<kJob.jobId;
-    //    allJobs[kJob.jobId]=kJob;
     jobQueue[kJob.jobId]=kJob;
-    if(kJob.type == kPortScan)
-        printScanResultForPort(kJob.result,kJob.desIp);
-    else if(kJob.type == kProtocolScan)
-        printProtocolScanResult(kJob.protocolScanResult);
-    cout<<"\n----------------------END------------------------------------\n";
+//    if(kJob.type == kPortScan)
+//        printScanResultForPort(kJob.result,kJob.desIp);
+//    else if(kJob.type == kProtocolScan)
+//        printProtocolScanResult(kJob.protocolScanResult);
     pthread_mutex_unlock(&kMutex);
     
     
@@ -1879,7 +1869,6 @@ void* handleJob(void *arg)
     
     
     int myId = ((Worker *)arg)->workerId;
-    cout<<"\nI am worker"<<myId<<endl;
     Job nextJob;
     while (1)
     {
@@ -1890,11 +1879,9 @@ void* handleJob(void *arg)
         else
         {
             nextJob = *nnj;
-            //cout<<"\n Job for : "<<myId<<"sip :"<<nextJob.srcIp<<" dip :"<<nextJob.desIp<<" sp ;"<<nextJob.srcPort<<" dp ;  "<<nextJob.desPort;
             if(nextJob.type == kPortScan)
             {
                 //pthread_mutex_lock(&k_tcp_scan_result_mutex);
-                cout<<"\n>>>>>>>>>>>>>>>>>>>>>>>>>Starting Job<<<<<<<<<<<<<<<<<<<<<<<<<<<<<";
                 //Job is of kind port scan
                 //initialsize results array
                 nextJob.result.portNo = nextJob.desPort;
@@ -1908,52 +1895,38 @@ void* handleJob(void *arg)
                 
                 if(nextJob.scanTypeToUse[SYN_SCAN]==1)
                 {
-                    //cout<<"\nInside SYN";
-                    
                     ScanRequest synRequest = createScanRequestFor(nextJob.srcPort, nextJob.desPort, nextJob.srcIp, nextJob.desIp,SYN_SCAN);
                     ScanResult synResult = sharedInstance->runTCPscan(synRequest);
                     nextJob.result.synState = synResult.tcp_portState;
-                    //                    cout<<"\n SYN Scanned By : "<<myId<<"  "<<synResult.srcIp<<"---"<<synResult.destIp<<" dd "<<synResult.destPort<<" rr "<<getStringForPortState(synResult.tcp_portState);
                 }
                 
                 if(nextJob.scanTypeToUse[FIN_SCAN]==1)
                 {
-                    // cout<<"\nInside FIN";
                     ScanRequest finRequest = createScanRequestFor(nextJob.srcPort, nextJob.desPort, nextJob.srcIp, nextJob.desIp,FIN_SCAN);
                     ScanResult finResult = sharedInstance->runTCPscan(finRequest);
                     nextJob.result.finState = finResult.tcp_portState;
-                    //                    cout<<"\n-FIN Scanned By : "<<myId<<"  "<<finResult.srcIp<<"---"<<finResult.destIp<<" dd "<<finResult.destPort<<" rr "<<getStringForPortState(finResult.tcp_portState);
                 }
                 if(nextJob.scanTypeToUse[ACK_SCAN]==1)
                 {
-                    // cout<<"\nInside FIN";
                     ScanRequest ackRequest = createScanRequestFor(nextJob.srcPort, nextJob.desPort, nextJob.srcIp, nextJob.desIp,ACK_SCAN);
                     ScanResult ackResult = sharedInstance->runTCPscan(ackRequest);
                     nextJob.result.ackState = ackResult.tcp_portState;
-                    //                    cout<<"\n--ACK Scanned By : "<<myId<<"  "<<ackResult.srcIp<<"---"<<ackResult.destIp<<" dd "<<ackResult.destPort<<" rr "<<getStringForPortState(ackResult.tcp_portState);
                 }
                 if(nextJob.scanTypeToUse[NULL_SCAN]==1)
                 {
-                    // cout<<"\nInside FIN";
                     ScanRequest nullRequest = createScanRequestFor(nextJob.srcPort, nextJob.desPort, nextJob.srcIp, nextJob.desIp,NULL_SCAN);
                     ScanResult nullResult = sharedInstance->runTCPscan(nullRequest);
                     nextJob.result.nullState = nullResult.tcp_portState;
-                    //                    cout<<"\n---NULL Scanned By : "<<myId<<"  "<<nullResult.srcIp<<"---"<<nullResult.destIp<<" dd "<<nullResult.destPort<<" rr "<<getStringForPortState(nullResult.tcp_portState);
                 }
                 if(nextJob.scanTypeToUse[XMAS_SCAN]==1)
                 {
-                    // cout<<"\nInside FIN";
                     ScanRequest xmasRequest = createScanRequestFor(nextJob.srcPort, nextJob.desPort, nextJob.srcIp, nextJob.desIp,XMAS_SCAN);
                     ScanResult xmasResult = sharedInstance->runTCPscan(xmasRequest);
                     nextJob.result.xmasState = xmasResult.tcp_portState;
-                    //                    cout<<"\n----XMAS Scanned By : "<<myId<<"  "<<xmasResult.srcIp<<"---"<<xmasResult.destIp<<" dd "<<xmasResult.destPort<<" rr "<<getStringForPortState(xmasResult.tcp_portState);
                 }
                 
                 
                 submitJob(nextJob);
-                cout<<"\n>>>>>>>>>>>>>>>>>>Done Job<<<<<<<<<<<<<<<<<<<<<<<<";
-                //pthread_mutex_unlock(&k_tcp_scan_result_mutex);
-                //Job is complete submit the job
             }
             else if(nextJob.type == kProtocolScan )
             {
@@ -2068,7 +2041,7 @@ void ScanController::scanPortsWithThread()
     pthread_mutex_destroy(&k_nextJob_mutex);
     pthread_mutex_destroy(&k_tcp_scan_result_mutex);
     sem_destroy(&mutex_raw_sockets);
-    cout<<"\nALl Done";
+    cout<<"\n All threads joined\n";
     
     
     printResult();
@@ -2092,7 +2065,8 @@ void printResult()
     for(int i=0; i<totalJobs ; i++)
     {
         Job kJob = jobQueue[i];
-        cout<<"\n--------------------- JOB RESULT : "<<kJob.jobId<<"---------------------------------------\n";
+        
+        cout<<"\n.................IP : "<<kJob.desIp<<".....................";
         if(kJob.type == kPortScan)
         {
             printScanResultForPort(kJob.result,kJob.desIp);
@@ -2101,7 +2075,6 @@ void printResult()
         }
         else if(kJob.type == kProtocolScan)
             printProtocolScanResult(kJob.protocolScanResult);
-        cout<<"\n----------------------END------------------------------------\n\n\n";
         pthread_mutex_unlock(&kMutex);
         
         

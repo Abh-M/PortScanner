@@ -275,7 +275,7 @@ devAndIp getMyIpAddress()
             {
                 
                 inet_ntop(AF_INET6, &(v6addr.sin6_addr), des, INET6_ADDRSTRLEN);
-                cout<<des;
+                //cout<<des;
             }
             
         }
@@ -299,17 +299,6 @@ devAndIp getMyIpAddress()
                 break;
             else
             {
-//                if(adrs->ifa_addr->sa_family==AF_INET6)
-//                {
-//                    char name[IF_NAMESIZE];
-//                    char *d = if_indextoname(((sockaddr_in6 *)(adrs->ifa_addr))->sin6_scope_id, name);
-//                    cout<<"\n "<<name;
-//                    inet_ntop(AF_INET6, &((sockaddr_in6 *)(adrs->ifa_addr))->sin6_addr, des, INET6_ADDRSTRLEN);
-//                    cout<<" : "<<des;
-//
-//
-//                }
-//                
 
                 struct sockaddr_in *so = (struct sockaddr_in*)adrs->ifa_addr;
                 const char* ipp = inet_ntoa(so->sin_addr);
@@ -318,7 +307,6 @@ devAndIp getMyIpAddress()
                 {
                     strcpy(result.dev, adrs->ifa_name);
                     strcpy(result.ip, ipaddr);
-                    //cout<<"\n--"<<adrs->ifa_name<<"--"<<inet_ntoa(so->sin_addr);
                 }
                 cmpres = strcmp(localHostIp, ipp);
                 if(cmpres==0)
@@ -346,9 +334,7 @@ devAndIp getMyIpAddress()
                 {
                     char name[IF_NAMESIZE];
                     char *d = if_indextoname(((sockaddr_in6 *)(adrs->ifa_addr))->sin6_scope_id, name);
-//                    cout<<"\n "<<name;
                     inet_ntop(AF_INET6, &((sockaddr_in6 *)(adrs->ifa_addr))->sin6_addr, des, INET6_ADDRSTRLEN);
-//                    cout<<" : "<<des;
                     if(d==NULL && strcmp(name, result.localhost_dev)==0)
                         strcpy(result.localHost_ipv6,des);
                     if(strcmp(name,result.dev)==0)
