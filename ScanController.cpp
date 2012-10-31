@@ -441,8 +441,7 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     if(recPakcet!=NULL)
     {
-        printf("\nJacked a packet with length of [%d]\n", header.caplen);
-        
+
         if(isv6)
         {
             //icmpv6
