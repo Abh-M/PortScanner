@@ -1,8 +1,5 @@
 /*
  * ScanController.h
- *
- *  Created on: Oct 13, 2012
- *      Author: raj
  */
 
 #ifndef SCANCONTROLLER_H_

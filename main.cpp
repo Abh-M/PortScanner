@@ -1,9 +1,5 @@
 //
 //  main.cpp
-//  demo
-//
-//  Created by Abhineet on 10/10/12.
-//  Copyright (c) 2012 Abhineet. All rights reserved.
 //
 
 #include "PCH.h"

@@ -1,9 +1,3 @@
-/*
- * Utils.cpp
- *
- *  Created on: Oct 13, 2012
- *      Author: raj
- */
 
 #include "Utils.h"
 #include <string.h>

@@ -1,9 +1,5 @@
 //
 //  Helpers.h
-//  demo
-//
-//  Created by Abhineet on 19/10/12.
-//  Copyright (c) 2012 Abhineet. All rights reserved.
 //
 
 #ifndef demo_Helpers_h

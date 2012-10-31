@@ -1,9 +1,5 @@
 //
 //  PCH.h
-//  demo
-//
-//  Created by Abhineet on 20/10/12.
-//  Copyright (c) 2012 Abhineet. All rights reserved.
 //
 
 #ifndef demo_PCH_h

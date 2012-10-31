@@ -1,9 +1,3 @@
-/*
- * Utils.h
- *
- *  Created on: Oct 13, 2012
- *      Author: raj
- */
 
 #ifndef UTILS_H_
 #define UTILS_H_
