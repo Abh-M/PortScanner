@@ -301,6 +301,11 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     if (handle == NULL) {
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
     }
+    if(filter_exp[strlen(filter_exp)-1]==':')
+    {
+        filter_exp[strlen(filter_exp)-1]='\0';
+    }
+
     if (pcap_compile(handle, &fp, filter_exp, 0, net) == -1) {
         fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(handle));
     }
@@ -674,6 +679,11 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
     if (handle == NULL) {
         fprintf(stderr, "Couldn't open device %s: %s\n", dev, errBuff);
     }
+    if(filter_exp[strlen(filter_exp)-1]==':')
+    {
+        filter_exp[strlen(filter_exp)-1]='\0';
+    }
+
     if (pcap_compile(handle, &fp, filter_exp, 0, net) == -1) {
         fprintf(stderr, "Couldn't parse filter %s: %s\n", filter_exp, pcap_geterr(handle));
     }
