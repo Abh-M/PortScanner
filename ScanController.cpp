@@ -264,6 +264,11 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         req.destIp = this->hostDevAndIp.ip;
         
     }
+    else if(!islhost)
+    {
+        dev = this->hostDevAndIp.dev;
+    }
+
     //cout<<dev;
     
     pcap_t *handle;
@@ -404,21 +409,20 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
         msg.msg_controllen=0;
         size_t res=0;
         res  =  sendmsg(sd, &msg,0);
-        cout<<"\n"<<res;
+//        cout<<"\n"<<res;
         
         
         
     }
-//    time_t start, end;
-//    double diff=0;
-//    time(&start);
-//    while (1) {
-//        time(&end);
-//        diff = difftime(end, start);
-//        //cout<<"\n..."<<diff;
-//        if(diff>=3.0)
-//            break;
-//    }
+    time_t start, end;
+    double diff=0;
+    time(&start);
+    while (1) {
+        time(&end);
+        diff = difftime(end, start);
+        if(diff>=3.0)
+            break;
+    }
 
     
     
@@ -584,10 +588,6 @@ void ScanController::startScan()
     {
         //distribute work
 
-        jobDistribution.resize(this->totalWorkers);
-        for (int i=0; i<this->totalWorkers; i++) {
-            jobDistribution[i].resize(3);
-        }
         setUpJobsAndJobDistribution();
         if(totalJobs>0)
             scanPortsWithThread();
@@ -649,6 +649,11 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         kRequest.destIp = this->hostDevAndIp.ip;
         
     }
+    else if(!islhost)
+    {
+        dev = this->hostDevAndIp.dev;
+    }
+
     
     
     pcap_t *handle;
@@ -922,6 +927,11 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
         kRequest.destIp = this->hostDevAndIp.ip;
 
     }
+    else if(!islhost)
+    {
+        dev = this->hostDevAndIp.dev;
+    }
+        
     
     pcap_t *handle;
     struct bpf_program fp;
@@ -1092,18 +1102,20 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     
     
-    
+    cout<<"\n Sleep";
+    sleep(3);
+    cout<<"\n Wakeup";
     //TODO: command line arg for timeout and set default value according to trial and error
-    time_t start, end;
-    double diff=0;
-    time(&start);
-    while (1) {
-        time(&end);
-        diff = difftime(end, start);
-        //cout<<"\n..."<<diff;
-        if(diff>=3.0)
-            break;
-    }
+//    time_t start, end;
+//    double diff=0;
+//    time(&start);
+//    while (1) {
+//        time(&end);
+//        diff = difftime(end, start);
+//        //cout<<"\n..."<<diff;
+//        if(diff>=3.0)
+//            break;
+//    }
     
     
     
@@ -1612,7 +1624,7 @@ void ScanController::scanPorts()
             }
         }
     }
-    void printResult();
+    printResult();
 
 }
 
@@ -1725,10 +1737,24 @@ void ScanController::setUpJobsAndJobDistribution()
     
     if(totalJobs>0)
     {
+        
         if(this->totalWorkers>NO_WORKERS)
         {
+
+            
+            
             //distribute work if number of workers is greater than zero
             int jobsPerWorker = totalJobs/this->totalWorkers;
+            
+            if(jobsPerWorker<1)
+                this->totalWorkers = totalJobs;
+            
+            jobDistribution.resize(this->totalWorkers);
+            for (int i=0; i<this->totalWorkers; i++) {
+                jobDistribution[i].resize(3);
+            }
+
+            
             int temp_totalJobs = totalJobs;
             
             for (int workerId =0; workerId<this->totalWorkers; workerId++) {
@@ -1767,13 +1793,6 @@ void ScanController::setUpJobsAndJobDistribution()
 }
 
 
-//Job getBonusJobForWorker(int kWorkerId)
-//{
-//    Job nJob;
-//
-//    return nJob;
-//
-//}
 
 
 Job*  ScanController::getNextJob(int kWorkerId)

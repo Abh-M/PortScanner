@@ -269,7 +269,6 @@ devAndIp getMyIpAddress()
         int res = connect(v6socket,(struct sockaddr*)&v6addr , socklen);
         if(res == 0)
         {
-            cout<<"\n connected";
             socklen_t srcLen = sizeof(v6addr);
             int result = getsockname(v6socket, (struct sockaddr*)&v6addr, &srcLen);
             if(result==0)
@@ -501,7 +500,6 @@ void scanWellKnownServices(char *ipAddress,int portNumber)
     int res = connect(clientFD, (struct sockaddr*)&sockAddr, sizeof(sockAddr));
     if(res>=0)
     {
-        //cout<<"Connected to server"<<endl;
         //Send
         //char *getRequest = new char[100] ;
         char getRequest[100];
