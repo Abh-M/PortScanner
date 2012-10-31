@@ -60,6 +60,9 @@ public:
     
     vector<string> allIpAddressToScan;
     int totalIpAddressToScan;
+    
+    
+    int defaultTimeout;
 
     
 //    vector<vector<int> > jobDistribution;

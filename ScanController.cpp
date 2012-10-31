@@ -101,7 +101,7 @@ ScanController::ScanController() {
     populateProtocolNumberToScan();
     
     
-    
+    this->defaultTimeout=3;
 }
 
 void ScanController::resetAllScanTypes()
@@ -432,10 +432,11 @@ ProtocolScanResult ScanController::runScanForProtocol(ProtocolScanRequest req)
     
     
     
+    sleep(this->defaultTimeout);
+
     //RECV
     struct pcap_pkthdr header;
     const u_char *recPakcet =  pcap_next(handle, &header);
-    //recPakcet =  pcap_next(handle, &header);
     
     if(recPakcet!=NULL)
     {
@@ -795,6 +796,8 @@ ScanResult ScanController::runUDPScan(ScanRequest kRequest)
         
     }
     
+    sleep(this->defaultTimeout);
+
     //RECV
     struct pcap_pkthdr header;
     const u_char *recPakcet =  pcap_next(handle, &header);
@@ -1112,21 +1115,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     
     
     
-    cout<<"\n Sleep";
-    sleep(3);
-    cout<<"\n Wakeup";
-    //TODO: command line arg for timeout and set default value according to trial and error
-//    time_t start, end;
-//    double diff=0;
-//    time(&start);
-//    while (1) {
-//        time(&end);
-//        diff = difftime(end, start);
-//        //cout<<"\n..."<<diff;
-//        if(diff>=3.0)
-//            break;
-//    }
-    
+    sleep(this->defaultTimeout);
     
     
     struct pcap_pkthdr header;
