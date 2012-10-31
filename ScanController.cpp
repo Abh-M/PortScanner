@@ -1678,7 +1678,7 @@ void ScanController::setUpJobsAndJobDistribution()
             newJob.jobId = jobId;
             newJob.type = kPortScan;
             //TODO: remove hard coding for SRC_PORT
-            newJob.srcPort = rand()%60000+1;
+            newJob.srcPort = SRC_PORT;
             newJob.desPort = destPort;
             
             
@@ -1715,7 +1715,7 @@ void ScanController::setUpJobsAndJobDistribution()
             newJob.srcIp = srcIp;
             newJob.desIp = (char*)nextIp;
             
-            newJob.srcPort = rand()%60000+1;
+            newJob.srcPort = SRC_PORT;
             newJob.desPort = NOT_REQUIRED;
             
             newJob.protocolNumber = proto;
@@ -1837,6 +1837,7 @@ Job*  ScanController::getNextJob(int kWorkerId)
                         currJob++;
                     nJob = &jobQueue[currJob];
                     jobDistribution[wkr][JOB_CURRENT_INDEX] = currJob;
+                    cout<<"\n...................lllllll..................\n";
                     break;
                 }
             }
