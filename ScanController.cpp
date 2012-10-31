@@ -913,7 +913,7 @@ ScanResult ScanController::runTCPscan(ScanRequest kRequest)
     status.destIp = kRequest.destIp;
     status.tcp_portState = kUnkown;
     
-    cout<<"\n Starting TCP scan for  IP :"<<kRequest.destIp<<" Port: "<<kRequest.destPort;
+    cout<<"\n Starting "<<scanNumToString(kRequest.scanType)<<"scan for  IP :"<<kRequest.destIp<<" Port: "<<kRequest.destPort;
     
     
     bool isv6=isIpV6(kRequest.destIp);
