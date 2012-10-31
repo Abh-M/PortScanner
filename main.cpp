@@ -24,12 +24,12 @@ int main(int argc, const char * argv[])
 	const char *valueSeperator = "=";
     vector<string> allIPaddress;
 	int portsList[MAX_PORTS];
+    
 	for(int i=1;i<argc;i++)
-        //0 is command
 	{
 		const char *arg = argv[i];
 		char *param = strtok((char *)arg, argSeperator);
-		cout<<"Param="<<param<<endl;
+        //		cout<<"Param="<<param<<endl;
 		char* val = NULL;
 		if(strcmp(param, ARG_HELP)==0)
 		{
@@ -43,16 +43,31 @@ int main(int argc, const char * argv[])
             char*ipAddress = strtok((char *)NULL, valueSeperator);
             if(ipAddress!=NULL)
             {
-                allIPaddress.push_back(ipAddress);
+            	if(validateTarget(ipAddress))
+            		allIPaddress.push_back(ipAddress);
+            	else
+            	{
+            		cout<<"Invalid IP address."<<endl;
+            		return 0;
+            	}
                 //cout<<"IP Address Entered: "<<ipAddress;
                 //Use ipaddress as required
             }
         }
 		if((strstr(param, ARG_PORTS))!=NULL)
 		{
+            //			cout<<"Inside !"<<endl;
             flushArray(portsList, MAX_PORTS);
             con->flushPortsList();
 			char *ports= strtok((char *)param, valueSeperator);
+            //			cout<<"Ports= "<<ports;
+			if((strcmp(ARG_PORTS,ports))!=0)
+			{
+                
+				cout<<"Invalid argument. Use "<<ARG_PORTS<<" instead of: "<<ports;
+				return 0;
+                
+			}
             strlen(ports);
 			while ((val = strtok(NULL, valueSeperator))!=NULL)
 			{
@@ -105,35 +120,60 @@ int main(int argc, const char * argv[])
 		if((strstr(param, ARG_PREFIX))!=NULL)
             //read ip prefix
 		{
+			char prefixType[15];
 			char*prefix = strtok((char *)param, valueSeperator);
 			char *networkIP;
 			char *mask;
-			cout<<prefix;
+            //			cout<<prefix;
 			while ((val = strtok(NULL, valueSeperator))!=NULL)
 			{
 				networkIP = strtok(val,"/");
-				//cout<<"IP:"<<networkIP;
 				if(networkIP!=NULL)
 				{
-					mask = strtok(NULL,"/");
+					if(validateTarget(networkIP))
+					{
+                        
+						mask = strtok(NULL,"/");
+						if(!isIpV6(networkIP))
+						{
+							if(atoi(mask)>31 || atoi(mask)<1)
+							{
+								cout<<"Invalid subnet mask: "<<mask<<endl;
+								return 0;
+							}
+						}else
+						{
+							if(atoi(mask)>127 || atoi(mask)<1)
+							{
+								cout<<"Invalid subnet mask: "<<mask<<endl;
+								return 0;
+							}
+						}
+					}
+					else
+					{
+						cout<<"Invalid IP prefix: "<<networkIP;
+						return 0;
+					}
 				}
 				//cout<<"mask"<<mask<<endl;
 			}
-			int totalIps = getAllIPAddressesInSubnet(networkIP, mask);
-            allIPaddress =  readIPFile("/Users/abhineet/Github/demo/demo/subnetips.txt");
+			int res = isIpV6(networkIP);
+			if(!isIpV6(networkIP))
+				getAllIPAddressesInSubnet(networkIP, mask);
+			else
+				getAllIPV6AddressesInSubnet(networkIP, mask);
+            allIPaddress =  readIPFile("subnetips.txt");
             cout<<"\nTotal Ip in subnet"<<allIPaddress.size();
-            
-            
             
 		}
 		if((strcmp(param, ARG_FILE))==0)
 		{
-			cout<<"Reading From File!"<<endl;
-            allIPaddress =  readIPFile("/Users/abhineet/Github/demo/demo/IPAddressList.txt");
-            cout<<"Reading From Done!"<<endl;//<<allIPaddress[1];
+            //			cout<<"Reading From File!"<<endl;
+            allIPaddress =  readIPFile(IP_LIST_FILE);
+            //            cout<<"Reading From Done!"<<endl;//<<allIPaddress[1];
             const char *ipp =allIPaddress[1].c_str();
-            cout<<"\n"<<ipp;
-            
+            //            cout<<"\n"<<ipp;
             
 		}
 		if((strstr(param, ARG_SPEED))!=NULL)
@@ -149,7 +189,7 @@ int main(int argc, const char * argv[])
                 
                 con->totalWorkers = atoi(threadsCount);
             }
-
+            
             
 		}
 		if((strstr(param, ARG_SCAN))!=NULL)
@@ -231,8 +271,6 @@ int main(int argc, const char * argv[])
                         }
                         
                     }
-                    cout<<"start Protocol:"<<startProtocol<<endl;
-                    cout<<"end Protocol:"<<endProtocol;
                 }
                 else if(strstr(val,",")!=NULL)
                 {
@@ -253,7 +291,7 @@ int main(int argc, const char * argv[])
                     }
                 }else
                 {
-                 protocolList[0]=atoi(val);
+                    protocolList[0]=atoi(val);
                     totalProtocols=1;
                 }
                 
@@ -264,8 +302,6 @@ int main(int argc, const char * argv[])
         
         
 	}
-    
-    
     
     if(allIPaddress.size()>0)
         con->populateIpAddressToScan(allIPaddress);

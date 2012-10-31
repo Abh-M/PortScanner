@@ -50,12 +50,14 @@
 #define ARG_FILE "--file"
 #define ARG_SPEED "--speedup"
 #define ARG_SCAN "--scan"
+//FIX: change
 #define ARG_PROTO "--pr"
 #define ARG_IP "--ip"
 
 
 #define HELP_FILE "help.txt"
-#define SUBNET_IP_FILE "/Users/abhineet/Github/demo/demo/subnetips.txt"
+#define SUBNET_IP_FILE "subnetips.txt"
+#define IP_LIST_FILE "IPAddressList.txt"
 
 #define INVALID_PORT -1
 #define INVALID_CODE -99
